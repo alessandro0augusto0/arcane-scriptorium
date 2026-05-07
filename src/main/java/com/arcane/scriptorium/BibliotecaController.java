@@ -2,11 +2,13 @@ package com.arcane.scriptorium;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class BibliotecaController {
     private final Grimorio grimorio;
     private final List<Mago> magos;
     private final List<MagoSpec> magoSpecs;
+    private Consumer<String> logListener;
 
     public BibliotecaController() {
         this.grimorio = new Grimorio();
@@ -41,6 +43,10 @@ public class BibliotecaController {
         }
     }
 
+    public void setLogListener(Consumer<String> logListener) {
+        this.logListener = logListener;
+    }
+
     public String pararSimulacao() {
         for (Mago mago : magos) {
             mago.interrupt();
@@ -68,6 +74,7 @@ public class BibliotecaController {
         magos.clear();
         for (MagoSpec spec : magoSpecs) {
             Mago mago = criarMago(spec);
+            registrarLogListener(mago);
             magos.add(mago);
         }
     }
@@ -78,6 +85,12 @@ public class BibliotecaController {
             case LEITOR_CRITICO -> new MagoLeitorCritico(spec.id, spec.nome, grimorio);
             case ESCRITOR -> new MagoEscritor(spec.id, spec.nome, grimorio);
         };
+    }
+
+    private void registrarLogListener(Mago mago) {
+        if (logListener != null) {
+            mago.setLogListener(logListener);
+        }
     }
 
     private enum TipoMago {
