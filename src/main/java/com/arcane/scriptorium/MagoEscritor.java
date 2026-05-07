@@ -9,11 +9,17 @@ public class MagoEscritor extends Mago {
     public void run() {
         while (!isInterrupted()) {
             setEstadoAtual(EstadoMago.DORMINDO);
-            // ciclo de vida: dormir, solicitar escrita, escrever, finalizar
+            dormir(700);
+
             setEstadoAtual(EstadoMago.AGUARDANDO_ACESSO);
-            grimorio.solicitarEscrita(this);
+            grimorio.down(grimorio.getCatraca());
+            grimorio.down(grimorio.getMutexEscrita());
+
             setEstadoAtual(EstadoMago.ESCREVENDO);
-            grimorio.finalizarEscrita(this);
+            dormir(1000);
+
+            grimorio.up(grimorio.getMutexEscrita());
+            grimorio.up(grimorio.getCatraca());
         }
     }
 }

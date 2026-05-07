@@ -29,4 +29,12 @@ public abstract class Mago extends Thread {
     protected void setEstadoAtual(EstadoMago novoEstado) {
         this.estadoAtual = novoEstado;
     }
+
+    protected void dormir(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 }
