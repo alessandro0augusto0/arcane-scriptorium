@@ -5,11 +5,31 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class BibliotecaController {
+    private static final String[] NOMES_LEITORES = {
+            "Frodo Baggins",
+            "Samwise",
+            "Harry Pointer",
+            "Hermione"
+    };
+    private static final String[] NOMES_LEITORES_CRITICOS = {
+            "Mestre Yodado",
+            "Neo"
+    };
+    private static final String[] NOMES_ESCRITORES = {
+            "Threadalf o Cinzento",
+            "Albus Double-Core",
+            "Ferumbytes",
+            "Darth Schedulor"
+    };
+
     private final Grimorio grimorio;
     private final List<Mago> magos;
     private final List<MagoSpec> magoSpecs;
     private Consumer<Mago> magoListener;
     private Consumer<String> logListener;
+    private int proximoIdLeitor;
+    private int proximoIdLeitorCritico;
+    private int proximoIdEscritor;
 
     public BibliotecaController() {
         this.grimorio = new Grimorio();
@@ -30,7 +50,9 @@ public class BibliotecaController {
     }
 
     public List<Mago> getMagos() {
-        return new ArrayList<>(magos);
+        synchronized (magos) {
+            return new ArrayList<>(magos);
+        }
     }
 
     public Grimorio getGrimorio() {
@@ -50,6 +72,33 @@ public class BibliotecaController {
         for (Mago mago : magos) {
             mago.start();
         }
+    }
+
+    public void prepararModoAutomatico() {
+        synchronized (magos) {
+            magos.clear();
+        }
+        magoSpecs.clear();
+    }
+
+    public void prepararModoManual() {
+        synchronized (magos) {
+            magos.clear();
+        }
+        magoSpecs.clear();
+        reiniciarGeradores();
+    }
+
+    public void invocarLeitorManual() {
+        criarMagoManual(TipoMago.LEITOR);
+    }
+
+    public void invocarLeitorCriticoManual() {
+        criarMagoManual(TipoMago.LEITOR_CRITICO);
+    }
+
+    public void invocarEscritorManual() {
+        criarMagoManual(TipoMago.ESCRITOR);
     }
 
     public String pararSimulacao() {
@@ -76,19 +125,27 @@ public class BibliotecaController {
     }
 
     private void configurarMagos() {
-        magos.clear();
+        synchronized (magos) {
+            magos.clear();
+        }
         for (MagoSpec spec : magoSpecs) {
             Mago mago = criarMago(spec);
             registrarListeners(mago);
-            magos.add(mago);
+            synchronized (magos) {
+                magos.add(mago);
+            }
         }
     }
 
     private Mago criarMago(MagoSpec spec) {
-        return switch (spec.tipo) {
-            case LEITOR -> new MagoLeitor(spec.id, spec.nome, grimorio);
-            case LEITOR_CRITICO -> new MagoLeitorCritico(spec.id, spec.nome, grimorio);
-            case ESCRITOR -> new MagoEscritor(spec.id, spec.nome, grimorio);
+        return criarMago(spec.tipo, spec.id, spec.nome, false);
+    }
+
+    private Mago criarMago(TipoMago tipo, int id, String nome, boolean cicloUnico) {
+        return switch (tipo) {
+            case LEITOR -> new MagoLeitor(id, nome, grimorio, cicloUnico);
+            case LEITOR_CRITICO -> new MagoLeitorCritico(id, nome, grimorio, cicloUnico);
+            case ESCRITOR -> new MagoEscritor(id, nome, grimorio, cicloUnico);
         };
     }
 
@@ -99,6 +156,55 @@ public class BibliotecaController {
         if (logListener != null) {
             mago.setLogListener(logListener);
         }
+    }
+
+    private void criarMagoManual(TipoMago tipo) {
+        int id = proximoId(tipo);
+        String nome = gerarNome(tipo, id);
+        Mago mago = criarMago(tipo, id, nome, true);
+        registrarListeners(mago);
+        mago.setFimListener(() -> removerMago(mago));
+
+        synchronized (magos) {
+            magos.add(mago);
+        }
+        if (magoListener != null) {
+            magoListener.accept(mago);
+        }
+        mago.start();
+    }
+
+    private void removerMago(Mago mago) {
+        synchronized (magos) {
+            magos.remove(mago);
+        }
+        if (magoListener != null) {
+            magoListener.accept(mago);
+        }
+    }
+
+    private int proximoId(TipoMago tipo) {
+        return switch (tipo) {
+            case LEITOR -> ++proximoIdLeitor;
+            case LEITOR_CRITICO -> ++proximoIdLeitorCritico;
+            case ESCRITOR -> ++proximoIdEscritor;
+        };
+    }
+
+    private String gerarNome(TipoMago tipo, int id) {
+        String[] base = switch (tipo) {
+            case LEITOR -> NOMES_LEITORES;
+            case LEITOR_CRITICO -> NOMES_LEITORES_CRITICOS;
+            case ESCRITOR -> NOMES_ESCRITORES;
+        };
+        int index = Math.floorMod(id - 1, base.length);
+        return base[index];
+    }
+
+    private void reiniciarGeradores() {
+        proximoIdLeitor = 0;
+        proximoIdLeitorCritico = 0;
+        proximoIdEscritor = 0;
     }
 
     private enum TipoMago {

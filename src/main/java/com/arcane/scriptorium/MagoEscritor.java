@@ -5,28 +5,34 @@ public class MagoEscritor extends Mago {
         super(id, nome, grimorio);
     }
 
+    public MagoEscritor(int id, String nome, Grimorio grimorio, boolean cicloUnico) {
+        super(id, nome, grimorio, cicloUnico);
+    }
+
     @Override
-    public void run() {
-        while (!isInterrupted()) {
-            setEstadoAtual(EstadoMago.DORMINDO);
-            log("📜 " + getNome() + " #" + getIdMago() + " descansando.");
-            dormir(700);
+    protected void executarCiclo() {
+        setEstadoAtual(EstadoMago.DORMINDO);
+        log("📜 " + getNome() + " #" + getIdMago() + " descansando.");
+        dormir(700);
 
-            setEstadoAtual(EstadoMago.AGUARDANDO_ACESSO);
-            log("📜 " + getNome() + " #" + getIdMago() + " solicitou acesso para escrita.");
-            long inicioEspera = System.currentTimeMillis();
-            grimorio.down(grimorio.getCatraca());
-            grimorio.down(grimorio.getMutexEscrita());
+        setEstadoAtual(EstadoMago.AGUARDANDO_ACESSO);
+        log("📜 " + getNome() + " #" + getIdMago() + " solicitou acesso para escrita.");
+        dormir(2000);
+        long inicioEspera = System.currentTimeMillis();
+        grimorio.down(grimorio.getCatraca());
+        grimorio.down(grimorio.getMutexEscrita());
 
-            long fimEspera = System.currentTimeMillis();
-            registrarAcesso(fimEspera - inicioEspera);
+        long fimEspera = System.currentTimeMillis();
+        registrarAcesso(fimEspera - inicioEspera);
 
-            setEstadoAtual(EstadoMago.ESCREVENDO);
-            log("📜 " + getNome() + " #" + getIdMago() + " trancou o grimorio de forma exclusiva.");
-            dormir(1000);
+        setEstadoAtual(EstadoMago.ESCREVENDO);
+        log("📜 " + getNome() + " #" + getIdMago() + " trancou o grimorio de forma exclusiva.");
+        dormir(4200);
 
-            grimorio.up(grimorio.getMutexEscrita());
-            grimorio.up(grimorio.getCatraca());
-        }
+        grimorio.up(grimorio.getMutexEscrita());
+        grimorio.up(grimorio.getCatraca());
+
+        setEstadoAtual(EstadoMago.DORMINDO);
+        log("📜 " + getNome() + " #" + getIdMago() + " concluiu o ciclo.");
     }
 }

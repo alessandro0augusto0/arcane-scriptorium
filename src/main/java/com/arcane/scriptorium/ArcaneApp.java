@@ -2,6 +2,7 @@ package com.arcane.scriptorium;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.animation.FadeTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -18,6 +19,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class ArcaneApp extends Application {
     private final BibliotecaController controller = new BibliotecaController();
@@ -25,42 +27,94 @@ public class ArcaneApp extends Application {
     private final ObservableList<Mago> leitoresCriticos = FXCollections.observableArrayList();
     private final ObservableList<Mago> escritores = FXCollections.observableArrayList();
 
+    private Stage stage;
     private Label statusGrimorioLabel;
     private Label leitoresAtivosLabel;
     private ListView<Mago> listaLeitores;
     private ListView<Mago> listaCriticos;
     private ListView<Mago> listaEscritores;
     private TextArea logArea;
+    private boolean simulacaoAtiva;
 
     @Override
     public void start(Stage stage) {
-        configurarMagos();
-
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("root-pane");
-
-        root.setTop(criarPainelStatus());
-        root.setCenter(criarPainelCentral());
-        root.setBottom(criarPainelAcoes());
-
-        configurarListeners();
-
-        Scene scene = new Scene(root, 1100, 700);
-        scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+        this.stage = stage;
         stage.setTitle("Arcane Scriptorium");
-        stage.setScene(scene);
-        stage.show();
-
-        atualizarStatus();
+        mostrarMenu();
     }
 
     private void configurarMagos() {
+        controller.prepararModoAutomatico();
         controller.adicionarLeitor(1, "Mago Leitor");
         controller.adicionarLeitor(2, "Maga Leitura");
         controller.adicionarLeitor(3, "Leitor Arcano");
         controller.adicionarLeitorCritico(4, "Mago Critico");
         controller.adicionarEscritor(5, "Ritualista");
         controller.adicionarEscritor(6, "Escriba Supremo");
+    }
+
+    private void mostrarMenu() {
+        BorderPane root = new BorderPane();
+        root.getStyleClass().add("menu-root");
+
+        Label titulo = new Label("Arcane Scriptorium");
+        titulo.getStyleClass().add("menu-title");
+
+        Label subtitulo = new Label("Forje, teste e domine a biblioteca arcana");
+        subtitulo.getStyleClass().add("menu-subtitle");
+
+        Button modoAutomatico = new Button("Modo Automatico");
+        modoAutomatico.getStyleClass().add("menu-button");
+        modoAutomatico.setOnAction(event -> iniciarModoAutomatico());
+
+        Button modoManual = new Button("Modo Manual");
+        modoManual.getStyleClass().add("menu-button");
+        modoManual.setOnAction(event -> iniciarModoManual());
+
+        VBox menuBox = new VBox(18, titulo, subtitulo, modoAutomatico, modoManual);
+        menuBox.setAlignment(Pos.CENTER);
+        menuBox.setPadding(new Insets(40));
+
+        root.setCenter(menuBox);
+
+        Scene scene = new Scene(root, 1100, 700);
+        scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private void iniciarModoAutomatico() {
+        simulacaoAtiva = false;
+        configurarMagos();
+        mostrarCenaPrincipal(false);
+        controller.iniciarSimulacao();
+        simulacaoAtiva = true;
+        carregarMagosDoController();
+        atualizarStatus();
+    }
+
+    private void iniciarModoManual() {
+        simulacaoAtiva = false;
+        controller.prepararModoManual();
+        mostrarCenaPrincipal(true);
+        carregarMagosDoController();
+        atualizarStatus();
+    }
+
+    private void mostrarCenaPrincipal(boolean modoManual) {
+        BorderPane root = new BorderPane();
+        root.getStyleClass().add("root-pane");
+
+        root.setTop(criarPainelStatus());
+        root.setCenter(criarPainelCentral());
+        root.setBottom(criarPainelAcoes(modoManual));
+
+        configurarListeners();
+
+        Scene scene = new Scene(root, 1100, 700);
+        scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+        stage.setScene(scene);
+        stage.show();
     }
 
     private void configurarListeners() {
@@ -102,11 +156,55 @@ public class ArcaneApp extends Application {
         return hbox;
     }
 
-    private VBox criarPainelAcoes() {
+    private VBox criarPainelAcoes(boolean modoManual) {
+        logArea = new TextArea();
+        logArea.setEditable(false);
+        logArea.setWrapText(true);
+        logArea.setPrefRowCount(6);
+        logArea.getStyleClass().add("log-area");
+
+        if (modoManual) {
+            Button invocarLeitor = new Button("Invocar Leitor");
+            invocarLeitor.getStyleClass().add("action-neutral");
+            invocarLeitor.setOnAction(event -> {
+                controller.invocarLeitorManual();
+                carregarMagosDoController();
+                atualizarStatus();
+            });
+
+            Button invocarLeitorCritico = new Button("Invocar Leitor Critico");
+            invocarLeitorCritico.getStyleClass().add("action-neutral");
+            invocarLeitorCritico.setOnAction(event -> {
+                controller.invocarLeitorCriticoManual();
+                carregarMagosDoController();
+                atualizarStatus();
+            });
+
+            Button invocarEscritor = new Button("Invocar Escritor");
+            invocarEscritor.getStyleClass().add("action-neutral");
+            invocarEscritor.setOnAction(event -> {
+                controller.invocarEscritorManual();
+                carregarMagosDoController();
+                atualizarStatus();
+            });
+
+            HBox box = new HBox(12, invocarLeitor, invocarLeitorCritico, invocarEscritor);
+            box.setAlignment(Pos.CENTER_RIGHT);
+            box.setPadding(new Insets(8, 0, 0, 0));
+
+            VBox painel = new VBox(10, logArea, box);
+            painel.setPadding(new Insets(12, 0, 0, 0));
+            return painel;
+        }
+
         Button iniciar = new Button("Iniciar Simulacao");
         iniciar.getStyleClass().add("action-start");
         iniciar.setOnAction(event -> {
+            if (simulacaoAtiva) {
+                return;
+            }
             controller.iniciarSimulacao();
+            simulacaoAtiva = true;
             carregarMagosDoController();
             atualizarStatus();
         });
@@ -115,18 +213,13 @@ public class ArcaneApp extends Application {
         parar.getStyleClass().add("action-stop");
         parar.setOnAction(event -> {
             String relatorio = controller.pararSimulacao();
+            simulacaoAtiva = false;
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Relatorio de Metricas");
             alert.setHeaderText("Simulacao finalizada");
             alert.setContentText(relatorio);
             alert.showAndWait();
         });
-
-        logArea = new TextArea();
-        logArea.setEditable(false);
-        logArea.setWrapText(true);
-        logArea.setPrefRowCount(6);
-        logArea.getStyleClass().add("log-area");
 
         HBox box = new HBox(12, iniciar, parar);
         box.setAlignment(Pos.CENTER_RIGHT);
@@ -145,6 +238,7 @@ public class ArcaneApp extends Application {
         lista.setPrefHeight(420);
 
         VBox box = new VBox(8, label, lista);
+        box.getStyleClass().add("panel-card");
         box.setPrefWidth(320);
         return box;
     }
@@ -159,6 +253,7 @@ public class ArcaneApp extends Application {
                     setText(null);
                     setGraphic(null);
                     setTextFill(Color.web("#c7c3b4"));
+                    setOpacity(1);
                     return;
                 }
 
@@ -168,6 +263,12 @@ public class ArcaneApp extends Application {
                         + " " + mago.getEstadoAtual();
                 setText(texto);
                 setTextFill(corParaEstado(mago.getEstadoAtual()));
+
+                setOpacity(0);
+                FadeTransition fade = new FadeTransition(Duration.millis(500), this);
+                fade.setFromValue(0);
+                fade.setToValue(1);
+                fade.play();
             }
         });
         return listView;
