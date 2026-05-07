@@ -1,0 +1,4 @@
+--patch-module
+com.arcane.scriptorium=_
+--add-reads
+com.arcane.scriptorium=ALL-UNNAMED
