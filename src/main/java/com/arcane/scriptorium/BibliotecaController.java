@@ -20,6 +20,10 @@ public class BibliotecaController {
         magos.add(new MagoEscritor(id, nome, grimorio));
     }
 
+    public void adicionarLeitorCritico(int id, String nome) {
+        magos.add(new MagoLeitorCritico(id, nome, grimorio));
+    }
+
     public List<Mago> getMagos() {
         return new ArrayList<>(magos);
     }
@@ -27,6 +31,24 @@ public class BibliotecaController {
     public void iniciarSimulacao() {
         for (Mago mago : magos) {
             mago.start();
+        }
+    }
+
+    public void pararSimulacao() {
+        for (Mago mago : magos) {
+            mago.interrupt();
+        }
+
+        System.out.println("Relatorio final de metricas:");
+        for (Mago mago : magos) {
+            int acessos = mago.getAcessosRealizados();
+            long totalEspera = mago.getTempoTotalEspera();
+            long mediaEspera = acessos > 0 ? totalEspera / acessos : 0;
+            System.out.println(
+                    mago.getNome()
+                            + " | acessos=" + acessos
+                            + " | esperaTotalMs=" + totalEspera
+                            + " | esperaMediaMs=" + mediaEspera);
         }
     }
 }

@@ -12,8 +12,12 @@ public class MagoEscritor extends Mago {
             dormir(700);
 
             setEstadoAtual(EstadoMago.AGUARDANDO_ACESSO);
+            long inicioEspera = System.currentTimeMillis();
             grimorio.down(grimorio.getCatraca());
             grimorio.down(grimorio.getMutexEscrita());
+
+            long fimEspera = System.currentTimeMillis();
+            registrarAcesso(fimEspera - inicioEspera);
 
             setEstadoAtual(EstadoMago.ESCREVENDO);
             dormir(1000);

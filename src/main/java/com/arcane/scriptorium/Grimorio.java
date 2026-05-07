@@ -1,18 +1,19 @@
 package com.arcane.scriptorium;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Grimorio {
     private final Semaphore mutexLeitura;
     private final Semaphore mutexEscrita;
     private final Semaphore catraca;
-    private int leitoresAtivos;
+    private final AtomicInteger leitoresAtivos;
 
     public Grimorio() {
         this.mutexLeitura = new Semaphore(1);
         this.mutexEscrita = new Semaphore(1);
         this.catraca = new Semaphore(1);
-        this.leitoresAtivos = 0;
+        this.leitoresAtivos = new AtomicInteger(0);
     }
 
     public Semaphore getMutexLeitura() {
@@ -28,17 +29,15 @@ public class Grimorio {
     }
 
     public int incrementarLeitores() {
-        leitoresAtivos += 1;
-        return leitoresAtivos;
+        return leitoresAtivos.incrementAndGet();
     }
 
     public int decrementarLeitores() {
-        leitoresAtivos -= 1;
-        return leitoresAtivos;
+        return leitoresAtivos.decrementAndGet();
     }
 
     public int getLeitoresAtivos() {
-        return leitoresAtivos;
+        return leitoresAtivos.get();
     }
 
     public void down(Semaphore s) {

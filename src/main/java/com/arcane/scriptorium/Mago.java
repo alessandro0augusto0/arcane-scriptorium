@@ -5,6 +5,8 @@ public abstract class Mago extends Thread {
     private final String nome;
     private volatile EstadoMago estadoAtual;
     protected final Grimorio grimorio;
+    private int acessosRealizados;
+    private long tempoTotalEspera;
 
     protected Mago(int id, String nome, Grimorio grimorio) {
         this.id = id;
@@ -26,8 +28,21 @@ public abstract class Mago extends Thread {
         return estadoAtual;
     }
 
+    public int getAcessosRealizados() {
+        return acessosRealizados;
+    }
+
+    public long getTempoTotalEspera() {
+        return tempoTotalEspera;
+    }
+
     protected void setEstadoAtual(EstadoMago novoEstado) {
         this.estadoAtual = novoEstado;
+    }
+
+    protected void registrarAcesso(long esperaMillis) {
+        acessosRealizados += 1;
+        tempoTotalEspera += esperaMillis;
     }
 
     protected void dormir(long millis) {
