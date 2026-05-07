@@ -1,5 +1,7 @@
 package com.arcane.scriptorium;
 
+import java.util.function.Consumer;
+
 public abstract class Mago extends Thread {
     private final int id;
     private final String nome;
@@ -7,6 +9,7 @@ public abstract class Mago extends Thread {
     protected final Grimorio grimorio;
     private int acessosRealizados;
     private long tempoTotalEspera;
+    private volatile Consumer<EstadoMago> estadoListener;
 
     protected Mago(int id, String nome, Grimorio grimorio) {
         this.id = id;
@@ -36,8 +39,16 @@ public abstract class Mago extends Thread {
         return tempoTotalEspera;
     }
 
+    public void setEstadoListener(Consumer<EstadoMago> estadoListener) {
+        this.estadoListener = estadoListener;
+    }
+
     protected void setEstadoAtual(EstadoMago novoEstado) {
         this.estadoAtual = novoEstado;
+        Consumer<EstadoMago> listener = this.estadoListener;
+        if (listener != null) {
+            listener.accept(novoEstado);
+        }
     }
 
     protected void registrarAcesso(long esperaMillis) {
