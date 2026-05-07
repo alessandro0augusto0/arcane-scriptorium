@@ -1,0 +1,55 @@
+.root-pane {
+    -fx-background-color: #0b0f1a;
+    -fx-padding: 16;
+}
+
+.header-title {
+    -fx-text-fill: #e6e1d3;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.status-label {
+    -fx-text-fill: #c7c3b4;
+    -fx-font-size: 16px;
+}
+
+.panel-title {
+    -fx-text-fill: #e6e1d3;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.mage-list {
+    -fx-control-inner-background: #141a2b;
+    -fx-background-color: #141a2b;
+    -fx-border-color: #2f3650;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.mage-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-font-size: 14px;
+}
+
+.log-area {
+    -fx-control-inner-background: #0f1524;
+    -fx-background-color: #0f1524;
+    -fx-text-fill: #d7d2c3;
+    -fx-border-color: #2f3650;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.action-start {
+    -fx-background-color: #1f6f4a;
+    -fx-text-fill: #f1f1f1;
+    -fx-font-weight: bold;
+}
+
+.action-stop {
+    -fx-background-color: #7d2b2b;
+    -fx-text-fill: #f1f1f1;
+    -fx-font-weight: bold;
+}

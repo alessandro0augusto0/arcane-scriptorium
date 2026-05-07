@@ -7,29 +7,26 @@ import java.util.function.Consumer;
 public class BibliotecaController {
     private final Grimorio grimorio;
     private final List<Mago> magos;
+    private final List<MagoSpec> magoSpecs;
     private Consumer<Mago> magoListener;
+    private Consumer<String> logListener;
 
     public BibliotecaController() {
         this.grimorio = new Grimorio();
         this.magos = new ArrayList<>();
+        this.magoSpecs = new ArrayList<>();
     }
 
     public void adicionarLeitor(int id, String nome) {
-        MagoLeitor mago = new MagoLeitor(id, nome, grimorio);
-        registrarListener(mago);
-        magos.add(mago);
+        magoSpecs.add(new MagoSpec(TipoMago.LEITOR, id, nome));
     }
 
     public void adicionarEscritor(int id, String nome) {
-        MagoEscritor mago = new MagoEscritor(id, nome, grimorio);
-        registrarListener(mago);
-        magos.add(mago);
+        magoSpecs.add(new MagoSpec(TipoMago.ESCRITOR, id, nome));
     }
 
     public void adicionarLeitorCritico(int id, String nome) {
-        MagoLeitorCritico mago = new MagoLeitorCritico(id, nome, grimorio);
-        registrarListener(mago);
-        magos.add(mago);
+        magoSpecs.add(new MagoSpec(TipoMago.LEITOR_CRITICO, id, nome));
     }
 
     public List<Mago> getMagos() {
@@ -42,12 +39,14 @@ public class BibliotecaController {
 
     public void setMagoListener(Consumer<Mago> magoListener) {
         this.magoListener = magoListener;
-        for (Mago mago : magos) {
-            registrarListener(mago);
-        }
+    }
+
+    public void setLogListener(Consumer<String> logListener) {
+        this.logListener = logListener;
     }
 
     public void iniciarSimulacao() {
+        configurarMagos();
         for (Mago mago : magos) {
             mago.start();
         }
@@ -76,10 +75,47 @@ public class BibliotecaController {
         return relatorio.toString();
     }
 
-    private void registrarListener(Mago mago) {
-        if (magoListener == null) {
-            return;
+    private void configurarMagos() {
+        magos.clear();
+        for (MagoSpec spec : magoSpecs) {
+            Mago mago = criarMago(spec);
+            registrarListeners(mago);
+            magos.add(mago);
         }
-        mago.setEstadoListener(estado -> magoListener.accept(mago));
+    }
+
+    private Mago criarMago(MagoSpec spec) {
+        return switch (spec.tipo) {
+            case LEITOR -> new MagoLeitor(spec.id, spec.nome, grimorio);
+            case LEITOR_CRITICO -> new MagoLeitorCritico(spec.id, spec.nome, grimorio);
+            case ESCRITOR -> new MagoEscritor(spec.id, spec.nome, grimorio);
+        };
+    }
+
+    private void registrarListeners(Mago mago) {
+        if (magoListener != null) {
+            mago.setEstadoListener(estado -> magoListener.accept(mago));
+        }
+        if (logListener != null) {
+            mago.setLogListener(logListener);
+        }
+    }
+
+    private enum TipoMago {
+        LEITOR,
+        LEITOR_CRITICO,
+        ESCRITOR
+    }
+
+    private static final class MagoSpec {
+        private final TipoMago tipo;
+        private final int id;
+        private final String nome;
+
+        private MagoSpec(TipoMago tipo, int id, String nome) {
+            this.tipo = tipo;
+            this.id = id;
+            this.nome = nome;
+        }
     }
 }

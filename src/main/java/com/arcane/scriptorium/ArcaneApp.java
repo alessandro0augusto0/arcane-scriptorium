@@ -12,6 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -29,20 +30,23 @@ public class ArcaneApp extends Application {
     private ListView<Mago> listaLeitores;
     private ListView<Mago> listaCriticos;
     private ListView<Mago> listaEscritores;
+    private TextArea logArea;
 
     @Override
     public void start(Stage stage) {
         configurarMagos();
-        configurarListenerDeEstado();
 
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #0b0f1a; -fx-padding: 16;");
+        root.getStyleClass().add("root-pane");
 
         root.setTop(criarPainelStatus());
         root.setCenter(criarPainelCentral());
         root.setBottom(criarPainelAcoes());
 
+        configurarListeners();
+
         Scene scene = new Scene(root, 1100, 700);
+        scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
         stage.setTitle("Arcane Scriptorium");
         stage.setScene(scene);
         stage.show();
@@ -57,36 +61,27 @@ public class ArcaneApp extends Application {
         controller.adicionarLeitorCritico(4, "Mago Critico");
         controller.adicionarEscritor(5, "Ritualista");
         controller.adicionarEscritor(6, "Escriba Supremo");
-
-        for (Mago mago : controller.getMagos()) {
-            if (mago instanceof MagoLeitorCritico) {
-                leitoresCriticos.add(mago);
-            } else if (mago instanceof MagoEscritor) {
-                escritores.add(mago);
-            } else {
-                leitores.add(mago);
-            }
-        }
     }
 
-    private void configurarListenerDeEstado() {
+    private void configurarListeners() {
         controller.setMagoListener(mago -> Platform.runLater(() -> {
             listaLeitores.refresh();
             listaCriticos.refresh();
             listaEscritores.refresh();
             atualizarStatus();
         }));
+        controller.setLogListener(mensagem -> Platform.runLater(() -> appendLog(mensagem)));
     }
 
     private VBox criarPainelStatus() {
         Label titulo = new Label("Biblioteca Arcana");
-        titulo.setStyle("-fx-text-fill: #e6e1d3; -fx-font-size: 24px; -fx-font-weight: bold;");
+        titulo.getStyleClass().add("header-title");
 
         statusGrimorioLabel = new Label("Grimorio: Livre");
-        statusGrimorioLabel.setStyle("-fx-text-fill: #c7c3b4; -fx-font-size: 16px;");
+        statusGrimorioLabel.getStyleClass().add("status-label");
 
         leitoresAtivosLabel = new Label("Leitores ativos: 0");
-        leitoresAtivosLabel.setStyle("-fx-text-fill: #c7c3b4; -fx-font-size: 16px;");
+        leitoresAtivosLabel.getStyleClass().add("status-label");
 
         VBox box = new VBox(6, titulo, statusGrimorioLabel, leitoresAtivosLabel);
         box.setPadding(new Insets(0, 0, 12, 0));
@@ -109,9 +104,15 @@ public class ArcaneApp extends Application {
 
     private VBox criarPainelAcoes() {
         Button iniciar = new Button("Iniciar Simulacao");
-        iniciar.setOnAction(event -> controller.iniciarSimulacao());
+        iniciar.getStyleClass().add("action-start");
+        iniciar.setOnAction(event -> {
+            controller.iniciarSimulacao();
+            carregarMagosDoController();
+            atualizarStatus();
+        });
 
         Button parar = new Button("Parar Simulacao");
+        parar.getStyleClass().add("action-stop");
         parar.setOnAction(event -> {
             String relatorio = controller.pararSimulacao();
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -121,20 +122,26 @@ public class ArcaneApp extends Application {
             alert.showAndWait();
         });
 
-        iniciar.setStyle("-fx-background-color: #1f6f4a; -fx-text-fill: #f1f1f1;");
-        parar.setStyle("-fx-background-color: #7d2b2b; -fx-text-fill: #f1f1f1;");
+        logArea = new TextArea();
+        logArea.setEditable(false);
+        logArea.setWrapText(true);
+        logArea.setPrefRowCount(6);
+        logArea.getStyleClass().add("log-area");
 
         HBox box = new HBox(12, iniciar, parar);
         box.setAlignment(Pos.CENTER_RIGHT);
-        box.setPadding(new Insets(12, 0, 0, 0));
-        return new VBox(box);
+        box.setPadding(new Insets(8, 0, 0, 0));
+
+        VBox painel = new VBox(10, logArea, box);
+        painel.setPadding(new Insets(12, 0, 0, 0));
+        return painel;
     }
 
     private VBox criarPainelLista(String titulo, ListView<Mago> lista) {
         Label label = new Label(titulo);
-        label.setStyle("-fx-text-fill: #e6e1d3; -fx-font-size: 18px; -fx-font-weight: bold;");
+        label.getStyleClass().add("panel-title");
 
-        lista.setStyle("-fx-control-inner-background: #141a2b; -fx-border-color: #2f3650;");
+        lista.getStyleClass().add("mage-list");
         lista.setPrefHeight(420);
 
         VBox box = new VBox(8, label, lista);
@@ -151,10 +158,15 @@ public class ArcaneApp extends Application {
                 if (empty || mago == null) {
                     setText(null);
                     setGraphic(null);
+                    setTextFill(Color.web("#c7c3b4"));
                     return;
                 }
 
-                setText(mago.getNome() + " (" + mago.getEstadoAtual() + ")");
+                String texto = iconeParaMago(mago)
+                        + " " + mago.getNome() + " #" + mago.getIdMago()
+                        + "  " + iconeParaEstado(mago.getEstadoAtual())
+                        + " " + mago.getEstadoAtual();
+                setText(texto);
                 setTextFill(corParaEstado(mago.getEstadoAtual()));
             }
         });
@@ -187,6 +199,49 @@ public class ArcaneApp extends Application {
             case LENDO -> Color.web("#57d37b");
             case ESCREVENDO -> Color.web("#c44a7a");
         };
+    }
+
+    private String iconeParaEstado(EstadoMago estado) {
+        return switch (estado) {
+            case DORMINDO -> "💤";
+            case AGUARDANDO_ACESSO -> "⏳";
+            case LENDO -> "✨";
+            case ESCREVENDO -> "🔥";
+        };
+    }
+
+    private String iconeParaMago(Mago mago) {
+        if (mago instanceof MagoLeitorCritico) {
+            return "⚡";
+        }
+        if (mago instanceof MagoEscritor) {
+            return "📜";
+        }
+        return "📘";
+    }
+
+    private void carregarMagosDoController() {
+        leitores.clear();
+        leitoresCriticos.clear();
+        escritores.clear();
+
+        for (Mago mago : controller.getMagos()) {
+            if (mago instanceof MagoLeitorCritico) {
+                leitoresCriticos.add(mago);
+            } else if (mago instanceof MagoEscritor) {
+                escritores.add(mago);
+            } else {
+                leitores.add(mago);
+            }
+        }
+    }
+
+    private void appendLog(String mensagem) {
+        if (logArea == null) {
+            return;
+        }
+        logArea.appendText(mensagem + "\n");
+        logArea.positionCaret(logArea.getText().length());
     }
 
     public static void main(String[] args) {

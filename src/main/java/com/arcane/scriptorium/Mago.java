@@ -10,6 +10,7 @@ public abstract class Mago extends Thread {
     private int acessosRealizados;
     private long tempoTotalEspera;
     private volatile Consumer<EstadoMago> estadoListener;
+    private volatile Consumer<String> logListener;
 
     protected Mago(int id, String nome, Grimorio grimorio) {
         this.id = id;
@@ -43,6 +44,10 @@ public abstract class Mago extends Thread {
         this.estadoListener = estadoListener;
     }
 
+    public void setLogListener(Consumer<String> logListener) {
+        this.logListener = logListener;
+    }
+
     protected void setEstadoAtual(EstadoMago novoEstado) {
         this.estadoAtual = novoEstado;
         Consumer<EstadoMago> listener = this.estadoListener;
@@ -54,6 +59,13 @@ public abstract class Mago extends Thread {
     protected void registrarAcesso(long esperaMillis) {
         acessosRealizados += 1;
         tempoTotalEspera += esperaMillis;
+    }
+
+    protected void log(String mensagem) {
+        Consumer<String> listener = this.logListener;
+        if (listener != null) {
+            listener.accept(mensagem);
+        }
     }
 
     protected void dormir(long millis) {

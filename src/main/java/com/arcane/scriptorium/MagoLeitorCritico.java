@@ -9,9 +9,11 @@ public class MagoLeitorCritico extends Mago {
     public void run() {
         while (!isInterrupted()) {
             setEstadoAtual(EstadoMago.DORMINDO);
+            log("⚡ " + getNome() + " #" + getIdMago() + " descansando.");
             dormir(500);
 
             setEstadoAtual(EstadoMago.AGUARDANDO_ACESSO);
+            log("⚡ " + getNome() + " #" + getIdMago() + " ignorou a catraca para pesquisa critica.");
             long inicioEspera = System.currentTimeMillis();
 
             grimorio.down(grimorio.getMutexLeitura());
@@ -25,6 +27,7 @@ public class MagoLeitorCritico extends Mago {
             registrarAcesso(fimEspera - inicioEspera);
 
             setEstadoAtual(EstadoMago.LENDO);
+            log("⚡ " + getNome() + " #" + getIdMago() + " iniciou a leitura critica do grimorio.");
             dormir(800);
 
             grimorio.down(grimorio.getMutexLeitura());
