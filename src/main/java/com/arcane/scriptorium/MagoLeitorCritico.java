@@ -13,8 +13,16 @@ public class MagoLeitorCritico extends Mago {
             dormir(500);
 
             setEstadoAtual(EstadoMago.AGUARDANDO_ACESSO);
-            log("⚡ " + getNome() + " #" + getIdMago() + " ignorou a catraca para pesquisa critica.");
             long inicioEspera = System.currentTimeMillis();
+
+            if (grimorio.isLimiteAtingido()) {
+                log("⚡ [LIMITE ATINGIDO] Mago Critico " + getNome() + " #" + getIdMago()
+                        + " foi rebaixado para a fila da catraca.");
+                grimorio.down(grimorio.getCatraca());
+                grimorio.up(grimorio.getCatraca());
+            } else {
+                log("⚡ " + getNome() + " #" + getIdMago() + " ignorou a catraca para pesquisa critica.");
+            }
 
             grimorio.down(grimorio.getMutexLeitura());
             int leitores = grimorio.incrementarLeitores();
@@ -22,6 +30,7 @@ public class MagoLeitorCritico extends Mago {
                 grimorio.down(grimorio.getMutexEscrita());
             }
             grimorio.up(grimorio.getMutexLeitura());
+            grimorio.incrementarLeitoresConsecutivos();
 
             long fimEspera = System.currentTimeMillis();
             registrarAcesso(fimEspera - inicioEspera);

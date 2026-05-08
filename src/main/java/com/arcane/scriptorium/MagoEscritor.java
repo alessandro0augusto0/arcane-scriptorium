@@ -17,6 +17,7 @@ public class MagoEscritor extends Mago {
             long inicioEspera = System.currentTimeMillis();
             grimorio.down(grimorio.getCatraca());
             grimorio.down(grimorio.getMutexEscrita());
+            grimorio.zerarLeitoresConsecutivos();
 
             long fimEspera = System.currentTimeMillis();
             registrarAcesso(fimEspera - inicioEspera);

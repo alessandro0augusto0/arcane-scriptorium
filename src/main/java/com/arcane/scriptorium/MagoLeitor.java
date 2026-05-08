@@ -24,6 +24,7 @@ public class MagoLeitor extends Mago {
                 grimorio.down(grimorio.getMutexEscrita());
             }
             grimorio.up(grimorio.getMutexLeitura());
+            grimorio.incrementarLeitoresConsecutivos();
 
             long fimEspera = System.currentTimeMillis();
             registrarAcesso(fimEspera - inicioEspera);
