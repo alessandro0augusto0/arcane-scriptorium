@@ -15,9 +15,11 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Central monitor for the readers-writers policy.
  *
- * <p>All queue counters and priority decisions are guarded by {@code policyMutex}.
+ * <p>
+ * All queue counters and priority decisions are guarded by {@code policyMutex}.
  * The semaphore models the critical region itself: one writer owns it alone, or
- * the first reader in a reader batch owns it on behalf of all active readers.</p>
+ * the first reader in a reader batch owns it on behalf of all active readers.
+ * </p>
  */
 public final class ArcaneSynchronizationCoordinator {
     private final ReentrantLock policyMutex;
@@ -26,12 +28,15 @@ public final class ArcaneSynchronizationCoordinator {
     private final int maxCriticalVipBurst;
     private final EventBus eventBus;
 
+    private volatile boolean starvationPreventionEnabled;
+
     private int activeReaders;
     private boolean writerActive;
     private int waitingCommonReaders;
     private int waitingCriticalReaders;
     private int waitingWriters;
-    // Bounded post-write batch that prevents common readers from starving behind a writer cascade.
+    // Bounded post-write batch that prevents common readers from starving behind a
+    // writer cascade.
     private int commonReaderBatchQuota;
     private int criticalVipBurst;
     private long completedReads;
@@ -46,6 +51,20 @@ public final class ArcaneSynchronizationCoordinator {
         this.policyMutex = new ReentrantLock(true);
         this.stateChanged = policyMutex.newCondition();
         this.criticalRegionGate = new Semaphore(1, true);
+        this.starvationPreventionEnabled = true;
+    }
+
+    public void setStarvationPreventionEnabled(boolean enabled) {
+        policyMutex.lock();
+        try {
+            boolean wasEnabled = this.starvationPreventionEnabled;
+            this.starvationPreventionEnabled = enabled;
+            if (!wasEnabled && enabled) {
+                stateChanged.signalAll();
+            }
+        } finally {
+            policyMutex.unlock();
+        }
     }
 
     public AccessPermit acquire(ProcessDescriptor process) throws InterruptedException {
@@ -130,6 +149,13 @@ public final class ArcaneSynchronizationCoordinator {
     private boolean canEnter(AccessRole role) {
         if (writerActive) {
             return false;
+        }
+
+        if (!starvationPreventionEnabled) {
+            return switch (role) {
+                case COMMON_READER, CRITICAL_READER -> true;
+                case WRITER -> activeReaders == 0;
+            };
         }
 
         return switch (role) {
@@ -247,7 +273,6 @@ public final class ArcaneSynchronizationCoordinator {
                 criticalVipBurst,
                 maxCriticalVipBurst,
                 completedReads,
-                completedWrites
-        );
+                completedWrites);
     }
 }

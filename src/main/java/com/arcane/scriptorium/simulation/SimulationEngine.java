@@ -25,8 +25,7 @@ public final class SimulationEngine {
             Grimoire grimoire,
             ArcaneSynchronizationCoordinator coordinator,
             EventBus eventBus,
-            List<ArcaneAgent> agents
-    ) {
+            List<ArcaneAgent> agents) {
         this.grimoire = grimoire;
         this.coordinator = coordinator;
         this.eventBus = eventBus;
@@ -38,18 +37,16 @@ public final class SimulationEngine {
         Grimoire grimoire = new Grimoire("Codex Umbrae");
         ArcaneSynchronizationCoordinator coordinator = new ArcaneSynchronizationCoordinator(
                 config.maxCriticalReadersBeforeWriter(),
-                eventBus
-        );
+                eventBus);
 
         List<ProcessDescriptor> descriptors = List.of(
-                new ProcessDescriptor(1, "Ariadne", AccessRole.COMMON_READER),
-                new ProcessDescriptor(2, "Boreal", AccessRole.COMMON_READER),
-                new ProcessDescriptor(3, "Calisto", AccessRole.COMMON_READER),
-                new ProcessDescriptor(4, "Damaris", AccessRole.CRITICAL_READER),
-                new ProcessDescriptor(5, "Eldrin", AccessRole.CRITICAL_READER),
-                new ProcessDescriptor(6, "Fausto", AccessRole.WRITER),
-                new ProcessDescriptor(7, "Galen", AccessRole.WRITER)
-        );
+                new ProcessDescriptor(1, "Mago Harry", AccessRole.COMMON_READER),
+                new ProcessDescriptor(2, "Maga Hermione", AccessRole.COMMON_READER),
+                new ProcessDescriptor(3, "Mago Ron", AccessRole.COMMON_READER),
+                new ProcessDescriptor(4, "Feiticeiro Voldemort", AccessRole.CRITICAL_READER),
+                new ProcessDescriptor(5, "Feiticeiro Sauron", AccessRole.CRITICAL_READER),
+                new ProcessDescriptor(6, "Anciao Gandalf", AccessRole.WRITER),
+                new ProcessDescriptor(7, "Anciao Dumbledore", AccessRole.WRITER));
 
         List<ArcaneAgent> agents = descriptors.stream()
                 .map(descriptor -> AgentFactory.create(descriptor, grimoire, coordinator, config, eventBus))
@@ -98,8 +95,7 @@ public final class SimulationEngine {
                         metric.accesses(),
                         metric.totalWaitMillis(),
                         metric.averageWaitMillis(),
-                        metric.maxWaitMillis()
-                )));
+                        metric.maxWaitMillis())));
 
         SynchronizationSnapshot snapshot = coordinator.snapshot();
         report.append("=".repeat(76)).append('\n');
@@ -114,8 +110,7 @@ public final class SimulationEngine {
                 null,
                 null,
                 message,
-                coordinator.snapshot()
-        ));
+                coordinator.snapshot()));
     }
 
     private void joinQuietly(Thread thread) {
