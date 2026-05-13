@@ -18,6 +18,8 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -51,17 +53,8 @@ public class MenuPrincipal {
     }
 
     public void show() {
-        StackPane root = new StackPane();
-
-        boolean loaded = tryLoadVideo(root);
-        if (!loaded) {
-            loadFallbackImage(root);
-        }
-
-        AnchorPane buttonsLayer = buildButtonsLayer();
-        root.getChildren().add(buttonsLayer);
-
-        Scene scene = new Scene(root, WIDTH, HEIGHT);
+        StackPane loadingRoot = buildLoadingScreen();
+        Scene scene = new Scene(loadingRoot, WIDTH, HEIGHT);
         UiIcon.apply(stage);
         stage.setTitle("Biblioteca Arcana - Menu Principal");
         stage.setScene(scene);
@@ -69,39 +62,77 @@ public class MenuPrincipal {
         stage.setOnCloseRequest(event -> stopVideo());
         stage.show();
 
-        if (mediaPlayer != null) {
-            Platform.runLater(() -> mediaPlayer.play());
-        }
+        preloadMediaAndShow();
     }
 
-    private boolean tryLoadVideo(StackPane root) {
-        try {
-            String uri = resolveResourceUri(VIDEO_RESOURCE, VIDEO_DEV_PATH);
-            if (uri == null) {
-                return false;
-            }
+    private StackPane buildLoadingScreen() {
+        StackPane root = new StackPane();
+        root.setStyle("-fx-background-color: #0d0d1a;");
 
+        Text title = new Text("Carregando Biblioteca Arcana...");
+        title.setFont(Font.font("Serif", 20));
+        title.setStyle("-fx-fill: #f0c040;");
+
+        root.getChildren().add(title);
+        return root;
+    }
+
+    private void preloadMediaAndShow() {
+        String uri = resolveResourceUri(VIDEO_RESOURCE, VIDEO_DEV_PATH);
+        if (uri == null) {
+            Platform.runLater(() -> showMainScene(false));
+            return;
+        }
+
+        try {
             Media media = new Media(uri);
             mediaPlayer = new MediaPlayer(media);
             mediaPlayer.setMute(false);
             mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
             mediaPlayer.setAutoPlay(false);
+
             mediaPlayer.setOnError(() -> {
                 if (mediaPlayer.getError() != null) {
                     System.err.println("[MenuPrincipal] Media error: " + mediaPlayer.getError().getMessage());
                 }
+                Platform.runLater(() -> showMainScene(false));
             });
 
+            media.setOnError(() -> {
+                if (media.getError() != null) {
+                    System.err.println("[MenuPrincipal] Media load error: " + media.getError().getMessage());
+                }
+                Platform.runLater(() -> showMainScene(false));
+            });
+
+            mediaPlayer.setOnReady(() -> Platform.runLater(() -> showMainScene(true)));
+        } catch (Exception ex) {
+            System.err.println("[MenuPrincipal] Video load failure: " + ex.getMessage());
+            Platform.runLater(() -> showMainScene(false));
+        }
+    }
+
+    private void showMainScene(boolean withVideo) {
+        StackPane root = new StackPane();
+
+        if (withVideo && mediaPlayer != null) {
             MediaView view = new MediaView(mediaPlayer);
             view.setFitWidth(WIDTH);
             view.setFitHeight(HEIGHT);
             view.setPreserveRatio(false);
-
             root.getChildren().add(view);
-            return true;
-        } catch (Exception ex) {
-            System.err.println("[MenuPrincipal] Video load failure: " + ex.getMessage());
-            return false;
+        } else {
+            loadFallbackImage(root);
+        }
+
+        AnchorPane buttonsLayer = buildButtonsLayer();
+        root.getChildren().add(buttonsLayer);
+
+        Scene scene = new Scene(root, WIDTH, HEIGHT);
+        stage.setScene(scene);
+
+        if (withVideo && mediaPlayer != null) {
+            mediaPlayer.play();
         }
     }
 
