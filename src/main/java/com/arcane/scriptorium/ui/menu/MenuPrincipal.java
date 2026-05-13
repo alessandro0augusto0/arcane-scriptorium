@@ -1,5 +1,6 @@
 package com.arcane.scriptorium.ui.menu;
 
+import com.arcane.scriptorium.ui.UiIcon;
 import com.arcane.scriptorium.ui.regras.RegrasView;
 import com.arcane.scriptorium.ui.simulacao.SimulacaoView;
 import javafx.animation.ScaleTransition;
@@ -61,6 +62,7 @@ public class MenuPrincipal {
         root.getChildren().add(buttonsLayer);
 
         Scene scene = new Scene(root, WIDTH, HEIGHT);
+        UiIcon.apply(stage);
         stage.setTitle("Biblioteca Arcana - Menu Principal");
         stage.setScene(scene);
         stage.setResizable(false);
@@ -168,16 +170,16 @@ public class MenuPrincipal {
     private Button createInvisibleButton(String text) {
         Button button = new Button(text);
         String style = DEBUG_BUTTONS
-            ? "-fx-background-color: rgba(255,0,0,0.15);" +
-              "-fx-border-color: red;" +
-              "-fx-border-width: 2;" +
-              "-fx-text-fill: white;" +
-              "-fx-font-size: 11px;" +
-              "-fx-cursor: hand;"
-            : "-fx-background-color: rgba(0,0,0,0.01);" +
-              "-fx-border-color: transparent;" +
-              "-fx-text-fill: transparent;" +
-              "-fx-cursor: hand;";
+                ? "-fx-background-color: rgba(255,0,0,0.15);" +
+                        "-fx-border-color: red;" +
+                        "-fx-border-width: 2;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-cursor: hand;"
+                : "-fx-background-color: rgba(0,0,0,0.01);" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-text-fill: transparent;" +
+                        "-fx-cursor: hand;";
 
         button.setStyle(style);
 
@@ -218,6 +220,7 @@ public class MenuPrincipal {
 
     private void openSimulation() {
         Stage simulationStage = new Stage();
+        UiIcon.apply(simulationStage);
         simulationStage.setTitle("Biblioteca Arcana - Simulacao");
         simulationStage.setResizable(false);
 
@@ -228,6 +231,7 @@ public class MenuPrincipal {
 
     private void openRules() {
         Stage rulesStage = new Stage();
+        UiIcon.apply(rulesStage);
         rulesStage.setTitle("Regras da Simulacao");
         rulesStage.setResizable(false);
 
@@ -247,15 +251,13 @@ public class MenuPrincipal {
         alert.getButtonTypes().setAll(confirm, cancel);
 
         alert.getDialogPane().setStyle(
-            "-fx-background-color: #1a1a2e;" +
-            "-fx-border-color: #9b59b6;" +
-            "-fx-border-width: 2;"
-        );
+                "-fx-background-color: #1a1a2e;" +
+                        "-fx-border-color: #9b59b6;" +
+                        "-fx-border-width: 2;");
         alert.getDialogPane().lookup(".content.label").setStyle(
-            "-fx-text-fill: #e8d5b7;" +
-            "-fx-font-size: 14px;" +
-            "-fx-font-family: 'Serif';"
-        );
+                "-fx-text-fill: #e8d5b7;" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-font-family: 'Serif';");
 
         alert.initOwner(stage);
 

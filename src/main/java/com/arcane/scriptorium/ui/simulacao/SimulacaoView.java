@@ -51,13 +51,12 @@ public class SimulacaoView {
         subtitle.setStyle("-fx-fill: " + COLOR_SUBTITLE + ";");
 
         Text description = new Text(
-            "A simulacao de sincronizacao de acesso a grimorios\n" +
-            "esta sendo preparada pelos magos desenvolvedores.\n\n" +
-            "Em breve: visualizacao em tempo real de threads leitoras\n" +
-            "e escritoras competindo pelo acesso aos grimorios sagrados,\n" +
-            "com demonstracao de semaforos, starvation e politicas\n" +
-            "de sincronizacao."
-        );
+                "A simulacao de sincronizacao de acesso a grimorios\n" +
+                        "esta sendo preparada pelos magos desenvolvedores.\n\n" +
+                        "Em breve: visualizacao em tempo real de threads leitoras\n" +
+                        "e escritoras competindo pelo acesso aos grimorios sagrados,\n" +
+                        "com demonstracao de semaforos, starvation e politicas\n" +
+                        "de sincronizacao.");
         description.setFont(Font.font("Serif", 16));
         description.setStyle("-fx-fill: " + COLOR_TEXT + ";");
         description.setTextAlignment(TextAlignment.CENTER);
@@ -78,28 +77,26 @@ public class SimulacaoView {
         Button button = new Button("Voltar ao Menu");
 
         String normal = String.join(";",
-            "-fx-background-color: " + COLOR_BUTTON_BG,
-            "-fx-text-fill: " + COLOR_BUTTON_TEXT,
-            "-fx-font-family: Serif",
-            "-fx-font-size: 15px",
-            "-fx-font-weight: bold",
-            "-fx-border-color: #9b59b6",
-            "-fx-border-width: 1",
-            "-fx-padding: 10 32 10 32",
-            "-fx-cursor: hand"
-        );
+                "-fx-background-color: " + COLOR_BUTTON_BG,
+                "-fx-text-fill: " + COLOR_BUTTON_TEXT,
+                "-fx-font-family: Serif",
+                "-fx-font-size: 15px",
+                "-fx-font-weight: bold",
+                "-fx-border-color: #9b59b6",
+                "-fx-border-width: 1",
+                "-fx-padding: 10 32 10 32",
+                "-fx-cursor: hand");
 
         String hover = String.join(";",
-            "-fx-background-color: #6c3483",
-            "-fx-text-fill: #ffffff",
-            "-fx-font-family: Serif",
-            "-fx-font-size: 15px",
-            "-fx-font-weight: bold",
-            "-fx-border-color: #f0c040",
-            "-fx-border-width: 1",
-            "-fx-padding: 10 32 10 32",
-            "-fx-cursor: hand"
-        );
+                "-fx-background-color: #6c3483",
+                "-fx-text-fill: #ffffff",
+                "-fx-font-family: Serif",
+                "-fx-font-size: 15px",
+                "-fx-font-weight: bold",
+                "-fx-border-color: #f0c040",
+                "-fx-border-width: 1",
+                "-fx-padding: 10 32 10 32",
+                "-fx-cursor: hand");
 
         button.setStyle(normal);
         button.setOnMouseEntered(event -> button.setStyle(hover));

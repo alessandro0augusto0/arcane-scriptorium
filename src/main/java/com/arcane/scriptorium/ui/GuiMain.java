@@ -7,6 +7,7 @@ import javafx.stage.Stage;
 public class GuiMain extends Application {
     @Override
     public void start(Stage primaryStage) {
+        UiIcon.apply(primaryStage);
         MenuPrincipal menu = new MenuPrincipal(primaryStage);
         menu.show();
     }
