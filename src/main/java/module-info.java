@@ -1,6 +1,7 @@
 module com.arcane.scriptorium {
     requires javafx.controls;
     requires javafx.media;
+    requires transitive javafx.graphics;
 
     exports com.arcane.scriptorium;
     exports com.arcane.scriptorium.domain;
