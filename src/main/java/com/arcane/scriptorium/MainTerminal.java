@@ -47,12 +47,12 @@ public final class MainTerminal {
         System.out.println(engine.metricsReport());
 
         System.out.println();
-        System.out.println(Ansi.paint(Ansi.isEnabled(), Ansi.YELLOW, 
-            "DICA: Esta execução ocorreu com a prevenção de inanição (starvation) ATIVADA."));
-        System.out.println(Ansi.paint(Ansi.isEnabled(), Ansi.YELLOW, 
-            "Para visualizar o problema de inanição acontecendo na prática e interagir com o algoritmo,"));
-        System.out.println(Ansi.paint(Ansi.isEnabled(), Ansi.YELLOW, 
-            "abra a Interface Gráfica (GUI) da Biblioteca Arcana."));
+        System.out.println(Ansi.paint(Ansi.isEnabled(), Ansi.YELLOW,
+                "DICA: Esta execução ocorreu com a prevenção de inanição (starvation) ATIVADA."));
+        System.out.println(Ansi.paint(Ansi.isEnabled(), Ansi.YELLOW,
+                "Para visualizar o problema de inanição acontecendo na prática e interagir com o algoritmo,"));
+        System.out.println(Ansi.paint(Ansi.isEnabled(), Ansi.YELLOW,
+                "abra a Interface Gráfica (GUI) da Biblioteca Arcana."));
     }
 
     private static long parseDuration(String[] args) {
