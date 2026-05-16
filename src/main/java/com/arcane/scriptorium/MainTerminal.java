@@ -7,6 +7,7 @@ import com.arcane.scriptorium.ui.console.Ansi;
 import com.arcane.scriptorium.ui.console.ConsoleEventRenderer;
 
 import java.time.Duration;
+import java.util.Scanner;
 
 public final class MainTerminal {
     private static final long DEFAULT_DURATION_MS = 15_000L;
@@ -24,7 +25,20 @@ public final class MainTerminal {
                 .withDuration(Duration.ofMillis(durationMillis))
                 .withMaxCriticalReadersBeforeWriter(parseCriticalLimit(args));
 
-        SimulationEngine engine = SimulationEngine.defaultScenario(config, eventBus);
+        SimulationEngine engine;
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.println("Biblioteca Arcana - Selecione o cenário de execução");
+            System.out.println("1) Modo Clássico (1 Pergaminho - Foco em Inanição)");
+            System.out.println("2) Modo Elemental (4 Pergaminhos - Múltiplas Regiões)");
+            System.out.print("Escolha [1-2]: ");
+
+            String choice = scanner.nextLine().trim();
+            if ("2".equals(choice)) {
+                engine = SimulationEngine.elementalScenario(config, eventBus);
+            } else {
+                engine = SimulationEngine.defaultScenario(config, eventBus);
+            }
+        }
         engine.start();
         sleep(durationMillis);
         engine.stop();
