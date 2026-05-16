@@ -9,16 +9,16 @@ import com.arcane.scriptorium.synchronization.ArcaneSynchronizationCoordinator;
 import com.arcane.scriptorium.utils.RandomDuration;
 
 import java.time.Duration;
+import java.util.List;
 
 public final class CommonReaderAgent extends ArcaneAgent {
     public CommonReaderAgent(
             ProcessDescriptor descriptor,
-            Grimoire grimoire,
-            ArcaneSynchronizationCoordinator coordinator,
+            List<Grimoire> grimoires,
+            List<ArcaneSynchronizationCoordinator> coordinators,
             SimulationConfig config,
-            EventBus eventBus
-    ) {
-        super(descriptor, grimoire, coordinator, config, eventBus);
+            EventBus eventBus) {
+        super(descriptor, grimoires, coordinators, config, eventBus);
     }
 
     @Override
@@ -27,7 +27,7 @@ public final class CommonReaderAgent extends ArcaneAgent {
     }
 
     @Override
-    protected void enterCriticalRegion() {
-        publish(EventType.STATE, ProcessState.READING, grimoire().read(descriptor()));
+    protected void enterCriticalRegion(Grimoire grimoire, ArcaneSynchronizationCoordinator coordinator) {
+        publish(coordinator, EventType.STATE, ProcessState.READING, grimoire.read(descriptor()));
     }
 }

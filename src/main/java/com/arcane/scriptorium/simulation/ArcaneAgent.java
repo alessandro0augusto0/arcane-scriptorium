@@ -11,25 +11,26 @@ import com.arcane.scriptorium.synchronization.ArcaneSynchronizationCoordinator;
 import com.arcane.scriptorium.utils.RandomDuration;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class ArcaneAgent implements Runnable {
     private final ProcessDescriptor descriptor;
-    private final Grimoire grimoire;
-    private final ArcaneSynchronizationCoordinator coordinator;
+    private final List<Grimoire> grimoires;
+    private final List<ArcaneSynchronizationCoordinator> coordinators;
     private final SimulationConfig config;
     private final EventBus eventBus;
     private final ProcessMetrics metrics;
 
     protected ArcaneAgent(
             ProcessDescriptor descriptor,
-            Grimoire grimoire,
-            ArcaneSynchronizationCoordinator coordinator,
+            List<Grimoire> grimoires,
+            List<ArcaneSynchronizationCoordinator> coordinators,
             SimulationConfig config,
-            EventBus eventBus
-    ) {
+            EventBus eventBus) {
         this.descriptor = descriptor;
-        this.grimoire = grimoire;
-        this.coordinator = coordinator;
+        this.grimoires = grimoires;
+        this.coordinators = coordinators;
         this.config = config;
         this.eventBus = eventBus;
         this.metrics = new ProcessMetrics(descriptor);
@@ -40,17 +41,20 @@ public abstract class ArcaneAgent implements Runnable {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 rest();
-                waitForAccess();
-                try (AccessPermit permit = coordinator.acquire(descriptor)) {
+                int targetIndex = ThreadLocalRandom.current().nextInt(grimoires.size());
+                ArcaneSynchronizationCoordinator targetCoordinator = coordinators.get(targetIndex);
+                Grimoire targetGrimoire = grimoires.get(targetIndex);
+                waitForAccess(targetCoordinator);
+                try (AccessPermit permit = targetCoordinator.acquire(descriptor)) {
                     metrics.registerAccess(permit.waitedMillis());
-                    enterCriticalRegion();
+                    enterCriticalRegion(targetGrimoire, targetCoordinator);
                     Thread.sleep(activityDuration().toMillis());
                 }
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         } finally {
-            publish(EventType.STATE, ProcessState.STOPPED, "Processo encerrado.");
+            publish(primaryCoordinator(), EventType.STATE, ProcessState.STOPPED, "Processo encerrado.");
         }
     }
 
@@ -62,28 +66,35 @@ public abstract class ArcaneAgent implements Runnable {
         return descriptor;
     }
 
-    protected final Grimoire grimoire() {
-        return grimoire;
-    }
-
     protected final SimulationConfig config() {
         return config;
     }
 
-    protected final void publish(EventType type, ProcessState state, String message) {
+    protected final void publish(
+            ArcaneSynchronizationCoordinator coordinator,
+            EventType type,
+            ProcessState state,
+            String message) {
         eventBus.publish(SimulationEvent.now(type, descriptor, state, message, coordinator.snapshot()));
     }
 
     protected abstract Duration activityDuration();
 
-    protected abstract void enterCriticalRegion();
+    protected abstract void enterCriticalRegion(
+            Grimoire grimoire,
+            ArcaneSynchronizationCoordinator coordinator);
 
     private void rest() throws InterruptedException {
-        publish(EventType.STATE, ProcessState.RESTING, "Descansando antes da proxima tentativa.");
+        publish(primaryCoordinator(), EventType.STATE, ProcessState.RESTING,
+                "Descansando antes da proxima tentativa.");
         Thread.sleep(RandomDuration.between(config.minRest(), config.maxRest()).toMillis());
     }
 
-    private void waitForAccess() {
-        publish(EventType.WAITING, ProcessState.WAITING, "Solicitou acesso ao grimorio.");
+    private void waitForAccess(ArcaneSynchronizationCoordinator coordinator) {
+        publish(coordinator, EventType.WAITING, ProcessState.WAITING, "Solicitou acesso ao grimorio.");
+    }
+
+    private ArcaneSynchronizationCoordinator primaryCoordinator() {
+        return coordinators.get(0);
     }
 }

@@ -15,29 +15,28 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class SimulationEngine {
-    private final Grimoire grimoire;
-    private final ArcaneSynchronizationCoordinator coordinator;
+    private final List<Grimoire> grimoires;
+    private final List<ArcaneSynchronizationCoordinator> coordinators;
     private final EventBus eventBus;
     private final List<ArcaneAgent> agents;
     private final List<Thread> threads;
 
     private SimulationEngine(
-            Grimoire grimoire,
-            ArcaneSynchronizationCoordinator coordinator,
+            List<Grimoire> grimoires,
+            List<ArcaneSynchronizationCoordinator> coordinators,
             EventBus eventBus,
             List<ArcaneAgent> agents) {
-        this.grimoire = grimoire;
-        this.coordinator = coordinator;
+        this.grimoires = grimoires;
+        this.coordinators = coordinators;
         this.eventBus = eventBus;
         this.agents = agents;
         this.threads = new ArrayList<>();
     }
 
     public static SimulationEngine defaultScenario(SimulationConfig config, EventBus eventBus) {
-        Grimoire grimoire = new Grimoire("Codex Umbrae");
-        ArcaneSynchronizationCoordinator coordinator = new ArcaneSynchronizationCoordinator(
-                config.maxCriticalReadersBeforeWriter(),
-                eventBus);
+        List<Grimoire> grimoires = List.of(new Grimoire("Codex Umbrae"));
+        List<ArcaneSynchronizationCoordinator> coordinators = List.of(
+                new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus));
 
         List<ProcessDescriptor> descriptors = List.of(
                 new ProcessDescriptor(1, "Mago Harry", AccessRole.COMMON_READER),
@@ -49,10 +48,39 @@ public final class SimulationEngine {
                 new ProcessDescriptor(7, "Anciao Dumbledore", AccessRole.WRITER));
 
         List<ArcaneAgent> agents = descriptors.stream()
-                .map(descriptor -> AgentFactory.create(descriptor, grimoire, coordinator, config, eventBus))
+                .map(descriptor -> AgentFactory.create(descriptor, grimoires, coordinators, config, eventBus))
                 .toList();
 
-        return new SimulationEngine(grimoire, coordinator, eventBus, agents);
+        return new SimulationEngine(grimoires, coordinators, eventBus, agents);
+    }
+
+    public static SimulationEngine elementalScenario(SimulationConfig config, EventBus eventBus) {
+        List<Grimoire> grimoires = List.of(
+                new Grimoire("Fogo"),
+                new Grimoire("Agua"),
+                new Grimoire("Terra"),
+                new Grimoire("Ar"));
+
+        List<ArcaneSynchronizationCoordinator> coordinators = List.of(
+                new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus),
+                new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus),
+                new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus),
+                new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus));
+
+        List<ProcessDescriptor> descriptors = List.of(
+                new ProcessDescriptor(1, "Mago Harry", AccessRole.COMMON_READER),
+                new ProcessDescriptor(2, "Maga Hermione", AccessRole.COMMON_READER),
+                new ProcessDescriptor(3, "Mago Ron", AccessRole.COMMON_READER),
+                new ProcessDescriptor(4, "Feiticeiro Voldemort", AccessRole.CRITICAL_READER),
+                new ProcessDescriptor(5, "Feiticeiro Sauron", AccessRole.CRITICAL_READER),
+                new ProcessDescriptor(6, "Anciao Gandalf", AccessRole.WRITER),
+                new ProcessDescriptor(7, "Anciao Dumbledore", AccessRole.WRITER));
+
+        List<ArcaneAgent> agents = descriptors.stream()
+                .map(descriptor -> AgentFactory.create(descriptor, grimoires, coordinators, config, eventBus))
+                .toList();
+
+        return new SimulationEngine(grimoires, coordinators, eventBus, agents);
     }
 
     public void start() {
@@ -75,8 +103,8 @@ public final class SimulationEngine {
         publishSystem("Todos os agentes foram encerrados.");
     }
 
-    public Grimoire grimoire() {
-        return grimoire;
+    public List<Grimoire> grimoires() {
+        return grimoires;
     }
 
     public String metricsReport() {
@@ -97,7 +125,7 @@ public final class SimulationEngine {
                         metric.averageWaitMillis(),
                         metric.maxWaitMillis())));
 
-        SynchronizationSnapshot snapshot = coordinator.snapshot();
+        SynchronizationSnapshot snapshot = primaryCoordinator().snapshot();
         report.append("=".repeat(76)).append('\n');
         report.append("Estado final: ").append(snapshot.compact()).append('\n');
         return report.toString();
@@ -110,7 +138,11 @@ public final class SimulationEngine {
                 null,
                 null,
                 message,
-                coordinator.snapshot()));
+                primaryCoordinator().snapshot()));
+    }
+
+    private ArcaneSynchronizationCoordinator primaryCoordinator() {
+        return coordinators.get(0);
     }
 
     private void joinQuietly(Thread thread) {
