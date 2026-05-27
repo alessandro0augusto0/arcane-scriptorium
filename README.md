@@ -87,7 +87,7 @@ Antes de alcançar a porta, todo mago precisa passar por uma sala de triagem con
 * **Porta de Titânio** → `criticalRegionGate`
 * **Câmara de Criogenia** → `await()` do Java Condition
 
-![Fluxo da Biblioteca Arcana](docs\images\arcane-library-overview.png)
+![Fluxo da Biblioteca Arcana](docs/images/arcane-library-overview.png)
 
 ---
 
