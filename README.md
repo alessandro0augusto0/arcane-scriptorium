@@ -72,3 +72,119 @@ java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.va
 ```
 
 O documento [docs/concurrency-validation.md](docs/concurrency-validation.md) descreve os invariantes testados e as limitacoes conhecidas.
+
+# Regras
+
+## A Caixa Forte do Grimório
+
+Imagine um corredor de segurança máxima.
+No final dele existe uma **Porta de Titânio** (`criticalRegionGate`) protegendo o Grimório Arcano — a própria **Região Crítica** do sistema.
+
+Antes de alcançar a porta, todo mago precisa passar por uma sala de triagem controlada por:
+
+* **Catraca Arcana** → `policyMutex`
+* **Scanner de Retina** → `stateChanged + canEnter()`
+* **Porta de Titânio** → `criticalRegionGate`
+* **Câmara de Criogenia** → `await()` do Java Condition
+
+![Fluxo da Biblioteca Arcana](docs\images\arcane-library-overview.png)
+
+---
+
+## Fluxo de Execução
+
+### 1. O Primeiro Leitor
+
+Um leitor comum entra no sistema:
+
+* bloqueia a catraca (`policyMutex.lock()`)
+* passa pelo scanner (`canEnter(COMMON_READER)`)
+* aumenta `activeReaders`
+* o primeiro leitor abre a porta da região crítica (`criticalRegionGate.acquire()`)
+
+Enquanto houver leitores ativos, novos leitores podem compartilhar o acesso simultaneamente.
+
+---
+
+### 2. O Escritor é Bloqueado
+
+Quando um escritor chega:
+
+* ele passa pela catraca
+* o scanner detecta leitores ativos
+* o acesso é negado
+* `waitingWriters++` ativa o alerta de prioridade
+* a thread entra em `stateChanged.await()`
+
+O escritor é suspenso até que a região crítica fique totalmente livre.
+
+---
+
+### 3. Proteção Contra Starvation
+
+Se novos leitores comuns chegarem enquanto há escritores esperando:
+
+* o scanner bloqueia novos leitores
+* isso impede starvation dos escritores
+* as threads também entram em espera (`await()`)
+
+---
+
+### 4. Leitores VIP Ignoram a Fila
+
+Leitores críticos (`CRITICAL_READER`) possuem prioridade especial:
+
+* conseguem entrar mesmo com escritores aguardando
+* respeitam apenas o limite máximo configurado
+* compartilham a região crítica com outros leitores
+
+Isso simula um sistema híbrido de prioridade.
+
+---
+
+### 5. Saída da Região Crítica
+
+Quando os leitores terminam:
+
+* `activeReaders--`
+* o último leitor fecha a porta (`criticalRegionGate.release()`)
+* o sistema executa `stateChanged.signalAll()`
+
+Todas as threads congeladas são acordadas.
+
+---
+
+### 6. Reavaliação das Threads
+
+Após o `signalAll()`:
+
+* todas as threads disputam novamente o mutex
+* cada uma reexecuta `canEnter()`
+* o escritor finalmente consegue exclusividade
+* leitores posteriores voltam para espera caso necessário
+
+---
+
+## Objetivos do Coordenador
+
+O `ArcaneSynchronizationCoordinator` garante:
+
+* Exclusão mútua para escritores
+* Leitura concorrente segura
+* Prevenção de starvation
+* Priorização controlada para leitores críticos
+* Coordenação usando `Semaphore`, `Lock` e `Condition`
+
+---
+
+## Conceitos de Concorrência Demonstrados
+
+| Conceito                | Implementação          |
+| ----------------------- | ---------------------- |
+| Exclusão Mútua          | `Mutex (policyMutex)`  |
+| Região Crítica          | `criticalRegionGate`   |
+| Readers-Writers Problem | Coordenação híbrida    |
+| Condition Variables     | `stateChanged.await()` |
+| Wake-up coletivo        | `signalAll()`          |
+| Starvation Prevention   | `waitingWriters`       |
+| Threads concorrentes    | Agentes arcanos        |
