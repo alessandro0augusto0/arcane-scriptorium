@@ -253,7 +253,8 @@ public class MenuPrincipal {
         Stage simulationStage = new Stage();
         UiIcon.apply(simulationStage);
         simulationStage.setTitle("Biblioteca Arcana - Simulacao");
-        simulationStage.setResizable(false);
+        simulationStage.setResizable(true);
+        simulationStage.setMaximized(true);
 
         SimulacaoView view = new SimulacaoView(simulationStage);
         view.show();

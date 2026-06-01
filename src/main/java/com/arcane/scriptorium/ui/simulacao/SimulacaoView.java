@@ -2,25 +2,34 @@ package com.arcane.scriptorium.ui.simulacao;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class SimulacaoView {
-    private static final double WIDTH = 1280;
-    private static final double HEIGHT = 720;
-
-    private static final String COLOR_BG = "#0d0d1a";
+    private static final String COLOR_BG = "#0b0f1c";
+    private static final String COLOR_PANEL = "#121728";
+    private static final String COLOR_PANEL_BORDER = "#3b2a4f";
     private static final String COLOR_TITLE = "#f0c040";
-    private static final String COLOR_SUBTITLE = "#c39bd3";
-    private static final String COLOR_TEXT = "#8e9aaf";
-    private static final String COLOR_BUTTON_BG = "#4a235a";
+    private static final String COLOR_SUBTITLE = "#b8a7d9";
+    private static final String COLOR_TEXT = "#9aa6c3";
+    private static final String COLOR_BUTTON_BG = "#2d1d3a";
     private static final String COLOR_BUTTON_TEXT = "#f0c040";
+    private static final String COLOR_ACCENT = "#5d3a7a";
 
     private final Stage stage;
 
@@ -29,80 +38,276 @@ public class SimulacaoView {
     }
 
     public void show() {
-        VBox root = new VBox(24);
-        root.setAlignment(Pos.CENTER);
-        root.setPadding(new Insets(60));
-        root.setStyle("-fx-background-color: " + COLOR_BG + ";");
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
-        Text icon = new Text("[ simulacao ]");
-        icon.setFont(Font.font("Serif", 36));
-        icon.setStyle("-fx-fill: #6c3483;");
+        BorderPane root = new BorderPane();
+        root.setStyle("-fx-background-color: " + COLOR_BG + ";" +
+                "-fx-background-image: linear-gradient(to bottom, #0b0f1c, #0a1224);");
 
-        Text title = new Text("SIMULACAO");
-        title.setFont(Font.font("Serif", FontWeight.BOLD, 42));
-        title.setStyle("-fx-fill: " + COLOR_TITLE + ";");
+        root.setTop(buildHeader());
+        root.setLeft(buildQueuePanel());
+        root.setCenter(buildGrimoirePanel());
+        root.setRight(buildConfigPanel());
+        root.setBottom(buildBottomPanel());
+        BorderPane.setMargin(root.getTop(), new Insets(16, 24, 8, 24));
+        BorderPane.setMargin(root.getLeft(), new Insets(8, 12, 8, 24));
+        BorderPane.setMargin(root.getCenter(), new Insets(8, 12, 8, 12));
+        BorderPane.setMargin(root.getRight(), new Insets(8, 24, 8, 12));
+        BorderPane.setMargin(root.getBottom(), new Insets(8, 24, 16, 24));
 
-        Text line = new Text("----------------------------");
-        line.setStyle("-fx-fill: #9b59b6;");
-        line.setFont(Font.font(18));
-
-        Text subtitle = new Text("Em construcao");
-        subtitle.setFont(Font.font("Serif", FontWeight.BOLD, 22));
-        subtitle.setStyle("-fx-fill: " + COLOR_SUBTITLE + ";");
-
-        Text description = new Text(
-                "A simulacao de sincronizacao de acesso a grimorios\n" +
-                        "esta sendo preparada pelos magos desenvolvedores.\n\n" +
-                        "Em breve: visualizacao em tempo real de threads leitoras\n" +
-                        "e escritoras competindo pelo acesso aos grimorios sagrados,\n" +
-                        "com demonstracao de semaforos, starvation e politicas\n" +
-                        "de sincronizacao.");
-        description.setFont(Font.font("Serif", 16));
-        description.setStyle("-fx-fill: " + COLOR_TEXT + ";");
-        description.setTextAlignment(TextAlignment.CENTER);
-
-        Button back = buildBackButton();
-
-        Text footer = new Text("Biblioteca Arcana");
-        footer.setFont(Font.font("Serif", 13));
-        footer.setStyle("-fx-fill: #4a235a;");
-
-        root.getChildren().addAll(icon, title, line, subtitle, description, back, footer);
-
-        Scene scene = new Scene(root, WIDTH, HEIGHT);
+        Scene scene = new Scene(root, bounds.getWidth(), bounds.getHeight());
+        stage.setX(bounds.getMinX());
+        stage.setY(bounds.getMinY());
+        stage.setWidth(bounds.getWidth());
+        stage.setHeight(bounds.getHeight());
         stage.setScene(scene);
+        stage.setMaximized(true);
     }
 
-    private Button buildBackButton() {
-        Button button = new Button("Voltar ao Menu");
+    private HBox buildHeader() {
+        HBox header = new HBox(16);
+        header.setAlignment(Pos.CENTER_LEFT);
 
-        String normal = String.join(";",
+        Text title = new Text("Biblioteca Arcana");
+        title.setFont(Font.font("Serif", FontWeight.BOLD, 28));
+        title.setStyle("-fx-fill: " + COLOR_TITLE + ";");
+
+        HBox modeBox = new HBox(12);
+        modeBox.setAlignment(Pos.CENTER);
+        Button guided = buildTopButton("MODO GUIADO");
+        Button auto = buildTopButton("MODO AUTOMATICO");
+        modeBox.getChildren().addAll(guided, auto);
+
+        Button menu = buildTopButton("MENU PRINCIPAL");
+        menu.setOnAction(event -> stage.close());
+
+        Region spacerLeft = new Region();
+        Region spacerRight = new Region();
+        HBox.setHgrow(spacerLeft, Priority.ALWAYS);
+        HBox.setHgrow(spacerRight, Priority.ALWAYS);
+
+        header.getChildren().addAll(title, spacerLeft, modeBox, spacerRight, menu);
+        return header;
+    }
+
+    private VBox buildQueuePanel() {
+        VBox panel = buildPanel("FILA DE ESPERA");
+        panel.getChildren().addAll(
+                buildHint("Magos aguardando para acessar o grimorio."),
+                buildSlot("Mago #01", "Leitor"),
+                buildSlot("Mago #02", "Leitor Critico"),
+                buildSlot("Mago #03", "Escritor"),
+                buildSlot("Mago #04", "Leitor"));
+        return panel;
+    }
+
+    private StackPane buildGrimoirePanel() {
+        StackPane panel = new StackPane();
+        panel.setStyle(panelStyle());
+        panel.setMinWidth(520);
+
+        VBox content = new VBox(12);
+        content.setAlignment(Pos.CENTER);
+
+        Text title = new Text("GRIMORIO CENTRAL");
+        title.setFont(Font.font("Serif", FontWeight.BOLD, 22));
+        title.setStyle("-fx-fill: " + COLOR_TITLE + ";");
+
+        Text subtitle = new Text("Regiao critica (recurso compartilhado)");
+        subtitle.setFont(Font.font("Serif", 14));
+        subtitle.setStyle("-fx-fill: " + COLOR_SUBTITLE + ";");
+
+        StackPane arena = new StackPane();
+        arena.setPrefSize(420, 240);
+        arena.setStyle("-fx-background-color: #0f1424;" +
+                "-fx-border-color: " + COLOR_ACCENT + ";" +
+                "-fx-border-radius: 18;" +
+                "-fx-background-radius: 18;");
+
+        Text state = new Text("3 LEITORES ATIVOS");
+        state.setFont(Font.font("Serif", FontWeight.BOLD, 16));
+        state.setStyle("-fx-fill: #6fb1ff;");
+
+        arena.getChildren().add(state);
+
+        content.getChildren().addAll(title, subtitle, arena);
+        panel.getChildren().add(content);
+        return panel;
+    }
+
+    private VBox buildConfigPanel() {
+        VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        panel.getChildren().addAll(
+                buildLabelLine("Politica de sincronizacao"),
+                buildChip("Prioridade para leitores"),
+                buildSeparator(),
+                buildLabelLine("Modo de execucao"),
+                buildChip("Automatico"),
+                buildSeparator(),
+                buildLabelLine("Velocidade / tempo de leitura"),
+                buildHint("2.5s"),
+                buildSeparator(),
+                buildLabelLine("Velocidade / tempo de escrita"),
+                buildHint("5.0s"),
+                buildSeparator(),
+                buildLabelLine("Leitores VIP permitidos"),
+                buildHint("2"));
+        return panel;
+    }
+
+    private VBox buildBottomPanel() {
+        VBox bottom = new VBox(12);
+
+        HBox controls = new HBox(12);
+        controls.setAlignment(Pos.CENTER_LEFT);
+        controls.getChildren().addAll(
+                buildActionButton("Adicionar Leitor"),
+                buildActionButton("Adicionar Escritor"),
+                buildActionButton("Adicionar Leitor Critico"));
+
+        HBox lower = new HBox(12);
+        VBox metrics = buildPanel("METRICAS EM TEMPO REAL");
+        metrics.setMinWidth(360);
+        metrics.getChildren().addAll(
+                buildMetric("Tempo medio de espera (leitores)", "1.2s"),
+                buildMetric("Tempo medio de espera (escritores)", "12.3s"),
+                buildMetric("Leituras realizadas", "45"),
+                buildMetric("Escritas realizadas", "7"));
+
+        VBox log = buildPanel("LOG DE EVENTOS");
+        log.setMinWidth(420);
+        log.getChildren().addAll(
+                buildHint("[10:21:15] INFO  Mago #02 iniciou leitura."),
+                buildHint("[10:21:17] INFO  Mago #01 iniciou leitura."),
+                buildHint("[10:21:20] WARN  Escritor aguardando."));
+
+        VBox report = buildPanel("RELATORIO AUTOMATICO");
+        report.setMinWidth(260);
+        report.getChildren().addAll(
+                buildMetric("Leituras", "152"),
+                buildMetric("Escritas", "28"),
+                buildMetric("Starvation detectada", "Sim"),
+                buildHint("Exportar relatorio"));
+
+        HBox.setHgrow(log, Priority.ALWAYS);
+
+        lower.getChildren().addAll(metrics, log, report);
+        bottom.getChildren().addAll(controls, lower);
+        return bottom;
+    }
+
+    private VBox buildPanel(String titleText) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(12));
+        panel.setStyle(panelStyle());
+
+        Text title = new Text(titleText);
+        title.setFont(Font.font("Serif", FontWeight.BOLD, 14));
+        title.setStyle("-fx-fill: " + COLOR_TITLE + ";");
+        panel.getChildren().addAll(title, buildSeparator());
+        return panel;
+    }
+
+    private String panelStyle() {
+        return "-fx-background-color: " + COLOR_PANEL + ";" +
+                "-fx-border-color: " + COLOR_PANEL_BORDER + ";" +
+                "-fx-border-radius: 12;" +
+                "-fx-background-radius: 12;";
+    }
+
+    private Separator buildSeparator() {
+        Separator separator = new Separator();
+        separator.setStyle("-fx-opacity: 0.4;");
+        return separator;
+    }
+
+    private Text buildHint(String value) {
+        Text text = new Text(value);
+        text.setFont(Font.font("Serif", 12));
+        text.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+        text.setTextAlignment(TextAlignment.LEFT);
+        return text;
+    }
+
+    private Text buildLabelLine(String value) {
+        Text text = new Text(value);
+        text.setFont(Font.font("Serif", FontWeight.BOLD, 12));
+        text.setStyle("-fx-fill: " + COLOR_SUBTITLE + ";");
+        return text;
+    }
+
+    private HBox buildSlot(String name, String role) {
+        HBox row = new HBox(8);
+        row.setAlignment(Pos.CENTER_LEFT);
+        Label tag = new Label(role);
+        tag.setStyle("-fx-background-color: #1b2033;" +
+                "-fx-text-fill: " + COLOR_TEXT + ";" +
+                "-fx-padding: 2 6 2 6;" +
+                "-fx-border-color: " + COLOR_ACCENT + ";" +
+                "-fx-border-radius: 6;" +
+                "-fx-background-radius: 6;" +
+                "-fx-font-size: 11px;");
+
+        Text label = new Text(name);
+        label.setFont(Font.font("Serif", 12));
+        label.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+        row.getChildren().addAll(label, tag);
+        return row;
+    }
+
+    private HBox buildMetric(String label, String value) {
+        HBox row = new HBox(8);
+        row.setAlignment(Pos.CENTER_LEFT);
+        Text labelText = new Text(label + ":");
+        labelText.setFont(Font.font("Serif", 12));
+        labelText.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+
+        Text valueText = new Text(value);
+        valueText.setFont(Font.font("Serif", FontWeight.BOLD, 12));
+        valueText.setStyle("-fx-fill: " + COLOR_TITLE + ";");
+
+        row.getChildren().addAll(labelText, valueText);
+        return row;
+    }
+
+    private Label buildChip(String value) {
+        Label chip = new Label(value);
+        chip.setStyle("-fx-background-color: #1b2033;" +
+                "-fx-text-fill: " + COLOR_TEXT + ";" +
+                "-fx-padding: 4 10 4 10;" +
+                "-fx-border-color: " + COLOR_ACCENT + ";" +
+                "-fx-border-radius: 12;" +
+                "-fx-background-radius: 12;" +
+                "-fx-font-size: 11px;");
+        return chip;
+    }
+
+    private Button buildTopButton(String label) {
+        Button button = new Button(label);
+        button.setStyle(String.join(";",
                 "-fx-background-color: " + COLOR_BUTTON_BG,
                 "-fx-text-fill: " + COLOR_BUTTON_TEXT,
                 "-fx-font-family: Serif",
-                "-fx-font-size: 15px",
+                "-fx-font-size: 12px",
                 "-fx-font-weight: bold",
-                "-fx-border-color: #9b59b6",
+                "-fx-border-color: " + COLOR_ACCENT,
                 "-fx-border-width: 1",
-                "-fx-padding: 10 32 10 32",
-                "-fx-cursor: hand");
+                "-fx-padding: 8 18 8 18",
+                "-fx-cursor: hand"));
+        return button;
+    }
 
-        String hover = String.join(";",
-                "-fx-background-color: #6c3483",
-                "-fx-text-fill: #ffffff",
+    private Button buildActionButton(String label) {
+        Button button = new Button(label);
+        button.setStyle(String.join(";",
+                "-fx-background-color: #1b2033",
+                "-fx-text-fill: " + COLOR_TEXT,
                 "-fx-font-family: Serif",
-                "-fx-font-size: 15px",
-                "-fx-font-weight: bold",
-                "-fx-border-color: #f0c040",
+                "-fx-font-size: 12px",
+                "-fx-border-color: " + COLOR_ACCENT,
                 "-fx-border-width: 1",
-                "-fx-padding: 10 32 10 32",
-                "-fx-cursor: hand");
-
-        button.setStyle(normal);
-        button.setOnMouseEntered(event -> button.setStyle(hover));
-        button.setOnMouseExited(event -> button.setStyle(normal));
-        button.setOnAction(event -> stage.close());
-
+                "-fx-padding: 8 16 8 16",
+                "-fx-cursor: hand"));
         return button;
     }
 }
