@@ -42,7 +42,7 @@ public class SimulacaoView {
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: linear-gradient(to bottom, #0b0f1c, #0a1224);");
+        root.setStyle("-fx-background-color: linear-gradient(to bottom, " + COLOR_BG + ", #0a1224);");
 
         root.setTop(buildHeader());
         root.setLeft(buildQueuePanel());
