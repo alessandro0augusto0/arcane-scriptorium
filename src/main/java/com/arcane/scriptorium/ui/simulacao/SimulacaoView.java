@@ -1,5 +1,6 @@
 package com.arcane.scriptorium.ui.simulacao;
 
+import com.arcane.scriptorium.ui.menu.MenuPrincipal;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -41,8 +42,7 @@ public class SimulacaoView {
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: " + COLOR_BG + ";" +
-                "-fx-background-image: linear-gradient(to bottom, #0b0f1c, #0a1224);");
+        root.setStyle("-fx-background-color: linear-gradient(to bottom, #0b0f1c, #0a1224);");
 
         root.setTop(buildHeader());
         root.setLeft(buildQueuePanel());
@@ -79,7 +79,7 @@ public class SimulacaoView {
         modeBox.getChildren().addAll(guided, auto);
 
         Button menu = buildTopButton("MENU PRINCIPAL");
-        menu.setOnAction(event -> stage.close());
+        menu.setOnAction(event -> returnToMenu());
 
         Region spacerLeft = new Region();
         Region spacerRight = new Region();
@@ -88,6 +88,13 @@ public class SimulacaoView {
 
         header.getChildren().addAll(title, spacerLeft, modeBox, spacerRight, menu);
         return header;
+    }
+
+    private void returnToMenu() {
+        Stage menuStage = new Stage();
+        MenuPrincipal menu = new MenuPrincipal(menuStage);
+        menu.show();
+        stage.close();
     }
 
     private VBox buildQueuePanel() {

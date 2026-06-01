@@ -259,6 +259,9 @@ public class MenuPrincipal {
         SimulacaoView view = new SimulacaoView(simulationStage);
         view.show();
         simulationStage.show();
+
+        stopVideo();
+        stage.close();
     }
 
     private void openRules() {
