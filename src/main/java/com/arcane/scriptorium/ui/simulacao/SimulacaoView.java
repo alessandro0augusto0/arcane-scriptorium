@@ -76,7 +76,8 @@ public class SimulacaoView {
         modeBox.setAlignment(Pos.CENTER);
         Button guided = buildTopButton("MODO GUIADO");
         Button auto = buildTopButton("MODO AUTOMATICO");
-        modeBox.getChildren().addAll(guided, auto);
+        Button tests = buildTopButton("MODO TESTES");
+        modeBox.getChildren().addAll(guided, auto, tests);
 
         Button menu = buildTopButton("MENU PRINCIPAL");
         menu.setOnAction(event -> returnToMenu());
