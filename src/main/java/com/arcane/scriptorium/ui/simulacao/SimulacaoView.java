@@ -40,11 +40,14 @@ public class SimulacaoView {
 
     private final Stage stage;
     private Mode currentMode = Mode.GUIDED;
+    private int criticalRegions = 1;
     private BorderPane root;
     private VBox queuePanel;
     private StackPane grimoirePanel;
     private VBox configPanel;
     private HBox autoControls;
+    private Button regionsOneButton;
+    private Button regionsFourButton;
 
     public SimulacaoView(Stage stage) {
         this.stage = stage;
@@ -180,27 +183,79 @@ public class SimulacaoView {
         subtitle.setFont(Font.font("Serif", 14));
         subtitle.setStyle("-fx-fill: " + COLOR_SUBTITLE + ";");
 
+        VBox regionContainer = new VBox(12);
+        regionContainer.setAlignment(Pos.CENTER);
+        regionContainer.getChildren().addAll(title, subtitle, buildRegionArena());
+
+        content.getChildren().add(regionContainer);
+        panel.getChildren().add(content);
+        return panel;
+    }
+
+    private StackPane buildRegionArena() {
         StackPane arena = new StackPane();
-        arena.setPrefSize(420, 240);
         arena.setStyle("-fx-background-color: #0f1424;" +
                 "-fx-border-color: " + COLOR_ACCENT + ";" +
                 "-fx-border-radius: 18;" +
                 "-fx-background-radius: 18;");
 
-        Text state = new Text("3 LEITORES ATIVOS");
-        state.setFont(Font.font("Serif", FontWeight.BOLD, 16));
+        if (criticalRegions == 1) {
+            arena.setPrefSize(420, 240);
+            arena.getChildren().add(buildRegionState("GRIMORIO CENTRAL"));
+            return arena;
+        }
+
+        arena.setPrefSize(460, 280);
+        VBox grid = new VBox(12);
+        grid.setAlignment(Pos.CENTER);
+
+        HBox rowTop = new HBox(12);
+        rowTop.setAlignment(Pos.CENTER);
+        rowTop.getChildren().addAll(
+                buildRegionTile("GRIMORIO 1"),
+                buildRegionTile("GRIMORIO 2"));
+
+        HBox rowBottom = new HBox(12);
+        rowBottom.setAlignment(Pos.CENTER);
+        rowBottom.getChildren().addAll(
+                buildRegionTile("GRIMORIO 3"),
+                buildRegionTile("GRIMORIO 4"));
+
+        grid.getChildren().addAll(rowTop, rowBottom);
+        arena.getChildren().add(grid);
+        return arena;
+    }
+
+    private StackPane buildRegionTile(String label) {
+        StackPane tile = new StackPane();
+        tile.setPrefSize(180, 90);
+        tile.setStyle("-fx-background-color: #0d1426;" +
+                "-fx-border-color: " + COLOR_ACCENT + ";" +
+                "-fx-border-radius: 12;" +
+                "-fx-background-radius: 12;");
+        tile.getChildren().add(buildRegionState(label));
+        return tile;
+    }
+
+    private Text buildRegionState(String label) {
+        Text state = new Text(label);
+        state.setFont(Font.font("Serif", FontWeight.BOLD, 14));
         state.setStyle("-fx-fill: #6fb1ff;");
-
-        arena.getChildren().add(state);
-
-        content.getChildren().addAll(title, subtitle, arena);
-        panel.getChildren().add(content);
-        return panel;
+        return state;
     }
 
     private VBox buildConfigPanel() {
         VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
+        regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
+        regionsOneButton.setOnAction(event -> setCriticalRegions(1));
+        regionsFourButton.setOnAction(event -> setCriticalRegions(4));
+
         panel.getChildren().addAll(
+                buildLabelLine("Regioes criticas"),
+                regionsOneButton,
+                regionsFourButton,
+                buildSeparator(),
                 buildLabelLine("Politica de sincronizacao"),
                 buildChip("Prioridade para leitores"),
                 buildSeparator(),
@@ -218,56 +273,75 @@ public class SimulacaoView {
         return panel;
     }
 
-        private VBox buildBottomPanelGuided() {
+    private void setCriticalRegions(int regions) {
+        if (criticalRegions == regions) {
+            return;
+        }
+        criticalRegions = regions;
+        updateRegionToggleStyles();
+        grimoirePanel.getChildren().clear();
+        grimoirePanel.getChildren().add(buildGrimoirePanel().getChildren().get(0));
+    }
+
+    private void updateRegionToggleStyles() {
+        if (regionsOneButton != null) {
+            regionsOneButton.setStyle(buildToggleStyle(criticalRegions == 1));
+        }
+        if (regionsFourButton != null) {
+            regionsFourButton.setStyle(buildToggleStyle(criticalRegions == 4));
+        }
+    }
+
+    private VBox buildBottomPanelGuided() {
         VBox bottom = new VBox(12);
 
         HBox controls = new HBox(12);
         controls.setAlignment(Pos.CENTER_LEFT);
         controls.getChildren().addAll(
-            buildActionButton("Adicionar Leitor"),
-            buildActionButton("Adicionar Escritor"),
-            buildActionButton("Adicionar Leitor Critico"));
+                buildActionButton("Adicionar Leitor"),
+                buildActionButton("Adicionar Escritor"),
+                buildActionButton("Adicionar Leitor Critico"));
 
         bottom.getChildren().addAll(controls, buildLowerPanels());
         return bottom;
-        }
+    }
 
-        private VBox buildBottomPanelAutomatic() {
+    private VBox buildBottomPanelAutomatic() {
         VBox bottom = new VBox(12);
         bottom.getChildren().add(buildLowerPanels());
         return bottom;
-        }
+    }
 
-        private HBox buildLowerPanels() {
+    private HBox buildLowerPanels() {
         HBox lower = new HBox(12);
         VBox metrics = buildPanel("METRICAS EM TEMPO REAL");
         metrics.setMinWidth(360);
         metrics.getChildren().addAll(
-            buildMetric("Tempo medio de espera (leitores)", "1.2s"),
-            buildMetric("Tempo medio de espera (escritores)", "12.3s"),
-            buildMetric("Leituras realizadas", "45"),
-            buildMetric("Escritas realizadas", "7"));
+                buildMetric("Tempo medio de espera (leitores)", "1.2s"),
+                buildMetric("Tempo medio de espera (escritores)", "12.3s"),
+                buildMetric("Leituras realizadas", "45"),
+                buildMetric("Escritas realizadas", "7"));
 
         VBox log = buildPanel("LOG DE EVENTOS");
         log.setMinWidth(420);
         log.getChildren().addAll(
-            buildHint("[10:21:15] INFO  Mago #02 iniciou leitura."),
-            buildHint("[10:21:17] INFO  Mago #01 iniciou leitura."),
-            buildHint("[10:21:20] WARN  Escritor aguardando."));
+                buildHint("[10:21:15] INFO  Mago #02 iniciou leitura."),
+                buildHint("[10:21:17] INFO  Mago #01 iniciou leitura."),
+                buildHint("[10:21:20] WARN  Escritor aguardando."));
 
         VBox report = buildPanel("RELATORIO AUTOMATICO");
         report.setMinWidth(260);
         report.getChildren().addAll(
-            buildMetric("Leituras", "152"),
-            buildMetric("Escritas", "28"),
-            buildMetric("Starvation detectada", "Sim"),
-            buildHint("Exportar relatorio"));
+                buildMetric("Leituras", "152"),
+                buildMetric("Escritas", "28"),
+                buildMetric("Starvation detectada", "Sim"),
+                buildHint("Exportar relatorio"));
 
         HBox.setHgrow(log, Priority.ALWAYS);
 
         lower.getChildren().addAll(metrics, log, report);
         return lower;
-        }
+    }
 
     private VBox buildPanel(String titleText) {
         VBox panel = new VBox(10);
@@ -353,6 +427,28 @@ public class SimulacaoView {
                 "-fx-background-radius: 12;" +
                 "-fx-font-size: 11px;");
         return chip;
+    }
+
+    private Button buildToggleChip(String value, boolean active) {
+        Button chip = new Button(value);
+        chip.setStyle(buildToggleStyle(active));
+        chip.setMaxWidth(Double.MAX_VALUE);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        return chip;
+    }
+
+    private String buildToggleStyle(boolean active) {
+        String bg = active ? "#283a5a" : "#1b2033";
+        String border = active ? COLOR_TITLE : COLOR_ACCENT;
+        String text = active ? COLOR_TITLE : COLOR_TEXT;
+        return "-fx-background-color: " + bg + ";" +
+                "-fx-text-fill: " + text + ";" +
+                "-fx-padding: 4 10 4 10;" +
+                "-fx-border-color: " + border + ";" +
+                "-fx-border-radius: 12;" +
+                "-fx-background-radius: 12;" +
+                "-fx-font-size: 11px;" +
+                "-fx-cursor: hand;";
     }
 
     private Button buildTopButton(String label) {
