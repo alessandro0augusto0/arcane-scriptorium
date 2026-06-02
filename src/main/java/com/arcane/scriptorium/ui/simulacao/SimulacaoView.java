@@ -22,6 +22,12 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class SimulacaoView {
+    private enum Mode {
+        GUIDED,
+        AUTOMATIC,
+        TESTS
+    }
+
     private static final String COLOR_BG = "#0b0f1c";
     private static final String COLOR_PANEL = "#121728";
     private static final String COLOR_PANEL_BORDER = "#3b2a4f";
@@ -33,6 +39,12 @@ public class SimulacaoView {
     private static final String COLOR_ACCENT = "#5d3a7a";
 
     private final Stage stage;
+    private Mode currentMode = Mode.GUIDED;
+    private BorderPane root;
+    private VBox queuePanel;
+    private StackPane grimoirePanel;
+    private VBox configPanel;
+    private HBox autoControls;
 
     public SimulacaoView(Stage stage) {
         this.stage = stage;
@@ -41,14 +53,18 @@ public class SimulacaoView {
     public void show() {
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
-        BorderPane root = new BorderPane();
+        root = new BorderPane();
         root.setStyle("-fx-background-color: linear-gradient(to bottom, " + COLOR_BG + ", #0a1224);");
 
+        queuePanel = buildQueuePanel();
+        grimoirePanel = buildGrimoirePanel();
+        configPanel = buildConfigPanel();
+
         root.setTop(buildHeader());
-        root.setLeft(buildQueuePanel());
-        root.setCenter(buildGrimoirePanel());
-        root.setRight(buildConfigPanel());
-        root.setBottom(buildBottomPanel());
+        root.setLeft(queuePanel);
+        root.setCenter(grimoirePanel);
+        root.setRight(configPanel);
+        applyMode(currentMode);
         BorderPane.setMargin(root.getTop(), new Insets(16, 24, 8, 24));
         BorderPane.setMargin(root.getLeft(), new Insets(8, 12, 8, 24));
         BorderPane.setMargin(root.getCenter(), new Insets(8, 12, 8, 12));
@@ -68,6 +84,13 @@ public class SimulacaoView {
         HBox header = new HBox(16);
         header.setAlignment(Pos.CENTER_LEFT);
 
+        autoControls = new HBox(8);
+        autoControls.setAlignment(Pos.CENTER_LEFT);
+        Button play = buildTopButton("PLAY");
+        Button pause = buildTopButton("PAUSE");
+        Button stop = buildTopButton("STOP");
+        autoControls.getChildren().addAll(play, pause, stop);
+
         Text title = new Text("Biblioteca Arcana");
         title.setFont(Font.font("Serif", FontWeight.BOLD, 28));
         title.setStyle("-fx-fill: " + COLOR_TITLE + ";");
@@ -79,6 +102,10 @@ public class SimulacaoView {
         Button tests = buildTopButton("MODO TESTES");
         modeBox.getChildren().addAll(guided, auto, tests);
 
+        guided.setOnAction(event -> setMode(Mode.GUIDED));
+        auto.setOnAction(event -> setMode(Mode.AUTOMATIC));
+        tests.setOnAction(event -> setMode(Mode.TESTS));
+
         Button menu = buildTopButton("MENU PRINCIPAL");
         menu.setOnAction(event -> returnToMenu());
 
@@ -87,8 +114,36 @@ public class SimulacaoView {
         HBox.setHgrow(spacerLeft, Priority.ALWAYS);
         HBox.setHgrow(spacerRight, Priority.ALWAYS);
 
-        header.getChildren().addAll(title, spacerLeft, modeBox, spacerRight, menu);
+        header.getChildren().addAll(title, spacerLeft, modeBox, spacerRight, autoControls, menu);
         return header;
+    }
+
+    private void setMode(Mode mode) {
+        if (currentMode == mode) {
+            return;
+        }
+        currentMode = mode;
+        applyMode(mode);
+    }
+
+    private void applyMode(Mode mode) {
+        if (autoControls != null) {
+            boolean showAutoControls = mode == Mode.AUTOMATIC;
+            autoControls.setOpacity(showAutoControls ? 1.0 : 0.0);
+            autoControls.setMouseTransparent(!showAutoControls);
+        }
+
+        root.setLeft(queuePanel);
+        root.setCenter(grimoirePanel);
+        root.setRight(configPanel);
+
+        if (mode == Mode.GUIDED) {
+            root.setBottom(buildBottomPanelGuided());
+        } else if (mode == Mode.AUTOMATIC) {
+            root.setBottom(buildBottomPanelAutomatic());
+        } else {
+            root.setBottom(null);
+        }
     }
 
     private void returnToMenu() {
@@ -163,46 +218,56 @@ public class SimulacaoView {
         return panel;
     }
 
-    private VBox buildBottomPanel() {
+        private VBox buildBottomPanelGuided() {
         VBox bottom = new VBox(12);
 
         HBox controls = new HBox(12);
         controls.setAlignment(Pos.CENTER_LEFT);
         controls.getChildren().addAll(
-                buildActionButton("Adicionar Leitor"),
-                buildActionButton("Adicionar Escritor"),
-                buildActionButton("Adicionar Leitor Critico"));
+            buildActionButton("Adicionar Leitor"),
+            buildActionButton("Adicionar Escritor"),
+            buildActionButton("Adicionar Leitor Critico"));
 
+        bottom.getChildren().addAll(controls, buildLowerPanels());
+        return bottom;
+        }
+
+        private VBox buildBottomPanelAutomatic() {
+        VBox bottom = new VBox(12);
+        bottom.getChildren().add(buildLowerPanels());
+        return bottom;
+        }
+
+        private HBox buildLowerPanels() {
         HBox lower = new HBox(12);
         VBox metrics = buildPanel("METRICAS EM TEMPO REAL");
         metrics.setMinWidth(360);
         metrics.getChildren().addAll(
-                buildMetric("Tempo medio de espera (leitores)", "1.2s"),
-                buildMetric("Tempo medio de espera (escritores)", "12.3s"),
-                buildMetric("Leituras realizadas", "45"),
-                buildMetric("Escritas realizadas", "7"));
+            buildMetric("Tempo medio de espera (leitores)", "1.2s"),
+            buildMetric("Tempo medio de espera (escritores)", "12.3s"),
+            buildMetric("Leituras realizadas", "45"),
+            buildMetric("Escritas realizadas", "7"));
 
         VBox log = buildPanel("LOG DE EVENTOS");
         log.setMinWidth(420);
         log.getChildren().addAll(
-                buildHint("[10:21:15] INFO  Mago #02 iniciou leitura."),
-                buildHint("[10:21:17] INFO  Mago #01 iniciou leitura."),
-                buildHint("[10:21:20] WARN  Escritor aguardando."));
+            buildHint("[10:21:15] INFO  Mago #02 iniciou leitura."),
+            buildHint("[10:21:17] INFO  Mago #01 iniciou leitura."),
+            buildHint("[10:21:20] WARN  Escritor aguardando."));
 
         VBox report = buildPanel("RELATORIO AUTOMATICO");
         report.setMinWidth(260);
         report.getChildren().addAll(
-                buildMetric("Leituras", "152"),
-                buildMetric("Escritas", "28"),
-                buildMetric("Starvation detectada", "Sim"),
-                buildHint("Exportar relatorio"));
+            buildMetric("Leituras", "152"),
+            buildMetric("Escritas", "28"),
+            buildMetric("Starvation detectada", "Sim"),
+            buildHint("Exportar relatorio"));
 
         HBox.setHgrow(log, Priority.ALWAYS);
 
         lower.getChildren().addAll(metrics, log, report);
-        bottom.getChildren().addAll(controls, lower);
-        return bottom;
-    }
+        return lower;
+        }
 
     private VBox buildPanel(String titleText) {
         VBox panel = new VBox(10);
