@@ -41,13 +41,14 @@ public class SimulacaoView {
     private final Stage stage;
     private Mode currentMode = Mode.GUIDED;
     private int criticalRegions = 1;
+    private boolean starvationEnabled = false;
     private BorderPane root;
     private VBox queuePanel;
     private StackPane grimoirePanel;
-    private VBox configPanel;
     private HBox autoControls;
     private Button regionsOneButton;
     private Button regionsFourButton;
+    private Button starvationToggle;
 
     public SimulacaoView(Stage stage) {
         this.stage = stage;
@@ -61,7 +62,7 @@ public class SimulacaoView {
 
         queuePanel = buildQueuePanel();
         grimoirePanel = buildGrimoirePanel();
-        configPanel = buildConfigPanel();
+        VBox configPanel = buildConfigPanel(currentMode);
 
         root.setTop(buildHeader());
         root.setLeft(queuePanel);
@@ -131,14 +132,14 @@ public class SimulacaoView {
 
     private void applyMode(Mode mode) {
         if (autoControls != null) {
-            boolean showAutoControls = mode == Mode.AUTOMATIC;
+            boolean showAutoControls = mode == Mode.AUTOMATIC || mode == Mode.TESTS;
             autoControls.setOpacity(showAutoControls ? 1.0 : 0.0);
             autoControls.setMouseTransparent(!showAutoControls);
         }
 
         root.setLeft(queuePanel);
         root.setCenter(grimoirePanel);
-        root.setRight(configPanel);
+        root.setRight(buildConfigPanel(mode));
 
         if (mode == Mode.GUIDED) {
             root.setBottom(buildBottomPanelGuided());
@@ -244,7 +245,40 @@ public class SimulacaoView {
         return state;
     }
 
-    private VBox buildConfigPanel() {
+    private VBox buildConfigPanel(Mode mode) {
+        if (mode == Mode.TESTS) {
+            return buildConfigPanelTests();
+        }
+        return buildConfigPanelGuidedAuto();
+    }
+
+    private VBox buildConfigPanelGuidedAuto() {
+        VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
+        regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
+        regionsOneButton.setOnAction(event -> setCriticalRegions(1));
+        regionsFourButton.setOnAction(event -> setCriticalRegions(4));
+
+        starvationToggle = buildToggleChip("Starvation: desligado", starvationEnabled);
+        starvationToggle.setOnAction(event -> toggleStarvation());
+        updateStarvationToggle();
+
+        Button clearQueue = buildActionButton("Limpar fila");
+
+        panel.getChildren().addAll(
+                buildLabelLine("Regioes criticas"),
+                regionsOneButton,
+                regionsFourButton,
+                buildSeparator(),
+                buildLabelLine("Starvation"),
+                starvationToggle,
+                buildSeparator(),
+                buildLabelLine("Fila"),
+                clearQueue);
+        return panel;
+    }
+
+    private VBox buildConfigPanelTests() {
         VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
         regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
         regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
@@ -256,21 +290,27 @@ public class SimulacaoView {
                 regionsOneButton,
                 regionsFourButton,
                 buildSeparator(),
-                buildLabelLine("Politica de sincronizacao"),
-                buildChip("Prioridade para leitores"),
-                buildSeparator(),
-                buildLabelLine("Modo de execucao"),
-                buildChip("Automatico"),
-                buildSeparator(),
-                buildLabelLine("Velocidade / tempo de leitura"),
-                buildHint("2.5s"),
-                buildSeparator(),
-                buildLabelLine("Velocidade / tempo de escrita"),
-                buildHint("5.0s"),
-                buildSeparator(),
-                buildLabelLine("Leitores VIP permitidos"),
-                buildHint("2"));
+                buildLabelLine("Cenarios de teste"),
+                buildToggleChip("Teste de estresse", false),
+                buildToggleChip("Prioridade ao escritor", false),
+                buildToggleChip("Justica para leitores", false),
+                buildToggleChip("Limite de prioridade VIP", false),
+                buildToggleChip("Recuperacao de falhas", false));
         return panel;
+    }
+
+    private void toggleStarvation() {
+        starvationEnabled = !starvationEnabled;
+        updateStarvationToggle();
+    }
+
+    private void updateStarvationToggle() {
+        if (starvationToggle == null) {
+            return;
+        }
+        String label = starvationEnabled ? "Starvation: ligado" : "Starvation: desligado";
+        starvationToggle.setText(label);
+        starvationToggle.setStyle(buildToggleStyle(starvationEnabled));
     }
 
     private void setCriticalRegions(int regions) {
