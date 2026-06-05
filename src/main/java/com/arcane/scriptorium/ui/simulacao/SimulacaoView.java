@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
+import javafx.scene.control.Spinner;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -25,7 +26,8 @@ public class SimulacaoView {
     private enum Mode {
         GUIDED,
         AUTOMATIC,
-        TESTS
+        TESTS,
+        CUSTOM
     }
 
     private static final String COLOR_BG = "#0b0f1c";
@@ -104,11 +106,13 @@ public class SimulacaoView {
         Button guided = buildTopButton("MODO GUIADO");
         Button auto = buildTopButton("MODO AUTOMATICO");
         Button tests = buildTopButton("MODO TESTES");
-        modeBox.getChildren().addAll(guided, auto, tests);
+        Button custom = buildTopButton("MODO CUSTOM");
+        modeBox.getChildren().addAll(guided, auto, tests, custom);
 
         guided.setOnAction(event -> setMode(Mode.GUIDED));
         auto.setOnAction(event -> setMode(Mode.AUTOMATIC));
         tests.setOnAction(event -> setMode(Mode.TESTS));
+        custom.setOnAction(event -> setMode(Mode.CUSTOM));
 
         Button menu = buildTopButton("MENU PRINCIPAL");
         menu.setOnAction(event -> returnToMenu());
@@ -132,7 +136,7 @@ public class SimulacaoView {
 
     private void applyMode(Mode mode) {
         if (autoControls != null) {
-            boolean showAutoControls = mode == Mode.AUTOMATIC || mode == Mode.TESTS;
+            boolean showAutoControls = mode == Mode.AUTOMATIC || mode == Mode.TESTS || mode == Mode.CUSTOM;
             autoControls.setOpacity(showAutoControls ? 1.0 : 0.0);
             autoControls.setMouseTransparent(!showAutoControls);
         }
@@ -143,7 +147,7 @@ public class SimulacaoView {
 
         if (mode == Mode.GUIDED) {
             root.setBottom(buildBottomPanelGuided());
-        } else if (mode == Mode.AUTOMATIC) {
+        } else if (mode == Mode.AUTOMATIC || mode == Mode.CUSTOM) {
             root.setBottom(buildBottomPanelAutomatic());
         } else {
             root.setBottom(null);
@@ -248,6 +252,8 @@ public class SimulacaoView {
     private VBox buildConfigPanel(Mode mode) {
         if (mode == Mode.TESTS) {
             return buildConfigPanelTests();
+        } else if (mode == Mode.CUSTOM) {
+            return buildConfigPanelCustom();
         }
         return buildConfigPanelGuidedAuto();
     }
@@ -264,6 +270,7 @@ public class SimulacaoView {
         updateStarvationToggle();
 
         Button clearQueue = buildActionButton("Limpar fila");
+        Button resetBtn = buildActionButton("Resetar");
 
         panel.getChildren().addAll(
                 buildLabelLine("Regioes criticas"),
@@ -274,8 +281,66 @@ public class SimulacaoView {
                 starvationToggle,
                 buildSeparator(),
                 buildLabelLine("Fila"),
-                clearQueue);
+                clearQueue,
+                buildSeparator(),
+                buildLabelLine("Controles"),
+                resetBtn);
         return panel;
+    }
+
+    private VBox buildConfigPanelCustom() {
+        VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
+        regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
+        regionsOneButton.setOnAction(event -> setCriticalRegions(1));
+        regionsFourButton.setOnAction(event -> setCriticalRegions(4));
+
+        starvationToggle = buildToggleChip("Starvation: desligado", starvationEnabled);
+        starvationToggle.setOnAction(event -> toggleStarvation());
+        updateStarvationToggle();
+
+        Button clearQueue = buildActionButton("Limpar fila");
+        Button resetBtn = buildActionButton("Resetar");
+
+        panel.getChildren().addAll(
+                buildLabelLine("Regioes criticas"),
+                regionsOneButton,
+                regionsFourButton,
+                buildSeparator(),
+                buildLabelLine("Starvation"),
+                starvationToggle,
+                buildSeparator(),
+                buildLabelLine("Quantidade de Magos"),
+                buildSpinnerRow("Leitores comuns"),
+                buildSpinnerRow("Leitores criticos"),
+                buildSpinnerRow("Escritores"),
+                buildSeparator(),
+                buildLabelLine("Fila"),
+                clearQueue,
+                buildSeparator(),
+                buildLabelLine("Controles"),
+                resetBtn);
+        return panel;
+    }
+
+    private HBox buildSpinnerRow(String label) {
+        HBox row = new HBox(8);
+        row.setAlignment(Pos.CENTER_LEFT);
+        
+        Text text = new Text(label);
+        text.setFont(Font.font("Serif", 12));
+        text.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        Spinner<Integer> spinner = new Spinner<>(0, 100, 0);
+        spinner.setEditable(true);
+        spinner.setPrefWidth(70);
+        spinner.setStyle("-fx-base: " + COLOR_BUTTON_BG + ";");
+        
+        row.getChildren().addAll(text, spacer, spinner);
+        return row;
     }
 
     private VBox buildConfigPanelTests() {
@@ -284,6 +349,8 @@ public class SimulacaoView {
         regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
         regionsOneButton.setOnAction(event -> setCriticalRegions(1));
         regionsFourButton.setOnAction(event -> setCriticalRegions(4));
+
+        Button resetBtn = buildActionButton("Resetar");
 
         panel.getChildren().addAll(
                 buildLabelLine("Regioes criticas"),
@@ -295,7 +362,10 @@ public class SimulacaoView {
                 buildToggleChip("Prioridade ao escritor", false),
                 buildToggleChip("Justica para leitores", false),
                 buildToggleChip("Limite de prioridade VIP", false),
-                buildToggleChip("Recuperacao de falhas", false));
+                buildToggleChip("Recuperacao de falhas", false),
+                buildSeparator(),
+                buildLabelLine("Controles"),
+                resetBtn);
         return panel;
     }
 
