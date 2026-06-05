@@ -427,10 +427,12 @@ public class SimulacaoView {
         VBox metrics = buildPanel("METRICAS EM TEMPO REAL");
         metrics.setMinWidth(360);
         metrics.getChildren().addAll(
-                buildMetric("Tempo medio de espera (leitores)", "1.2s"),
-                buildMetric("Tempo medio de espera (escritores)", "12.3s"),
-                buildMetric("Leituras realizadas", "45"),
-                buildMetric("Escritas realizadas", "7"));
+                buildMetric("Leituras Comuns (Realizadas)", "0"),
+                buildMetric("Leituras Criticas VIPs (Realizadas)", "0"),
+                buildMetric("Escritas (Realizadas)", "0"),
+                buildMetric("Tempo Medio de Espera (Leitor)", "0.0s"),
+                buildMetric("Tempo Medio de Espera (Escritor)", "0.0s"),
+                buildMetric("Engarrafamento Atual (Fila)", "0 magos"));
 
         VBox log = buildPanel("LOG DE EVENTOS");
         log.setMinWidth(420);
@@ -442,10 +444,12 @@ public class SimulacaoView {
         VBox report = buildPanel("RELATORIO AUTOMATICO");
         report.setMinWidth(260);
         report.getChildren().addAll(
-                buildMetric("Leituras", "152"),
-                buildMetric("Escritas", "28"),
-                buildMetric("Starvation detectada", "Sim"),
-                buildHint("Exportar relatorio"));
+                buildMetric("Total de Acessos Concluidos", "0"),
+                buildMetric("Pior Tempo de Espera (Max)", "0.0s"),
+                buildMetric("Intervencoes Anti-Starvation", "0"),
+                buildMetric("Starvation Detectada", "Nao"),
+                buildSeparator(),
+                buildActionButton("Exportar Relatorio"));
 
         HBox.setHgrow(log, Priority.ALWAYS);
 
