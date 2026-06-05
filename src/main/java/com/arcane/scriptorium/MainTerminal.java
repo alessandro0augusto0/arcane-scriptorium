@@ -26,11 +26,29 @@ public final class MainTerminal {
                 .withMaxCriticalReadersBeforeWriter(parseCriticalLimit(args));
 
         SimulationEngine engine;
-        try (Scanner scanner = new Scanner(System.in)) {
-            System.out.println("Biblioteca Arcana - Selecione o cenário de execução");
-            System.out.println("1) Modo Clássico (1 Pergaminho - Foco em Inanição)");
-            System.out.println("2) Modo Elemental (4 Pergaminhos - Múltiplas Regiões)");
-            System.out.print("Escolha [1-2]: ");
+try (Scanner scanner = new Scanner(System.in)) {
+    boolean ansi = Ansi.isEnabled();
+
+System.out.println();
+System.out.println(Ansi.paint(ansi, Ansi.MAGENTA, "╔══════════════════════════════════════════════════════╗"));
+System.out.println(Ansi.paint(ansi, Ansi.MAGENTA, "║                   BIBLIOTECA ARCANA                  ║"));
+System.out.println(Ansi.paint(ansi, Ansi.MAGENTA, "║    Simulação do Problema dos Leitores e Escritores   ║"));
+System.out.println(Ansi.paint(ansi, Ansi.MAGENTA, "╠══════════════════════════════════════════════════════╣"));
+System.out.println(Ansi.paint(ansi, Ansi.CYAN,    "║      Escolha um cenário para iniciar os estudos:     ║"));
+System.out.println(Ansi.paint(ansi, Ansi.MAGENTA, "╠══════════════════════════════════════════════════════╣"));
+System.out.println(Ansi.paint(ansi, Ansi.GREEN,   "║ [1]  MODO CLÁSSICO                                   ║"));
+System.out.println(Ansi.paint(ansi, Ansi.GREEN,   "║     ├─ 1 Pergaminho Compartilhado                    ║"));
+System.out.println(Ansi.paint(ansi, Ansi.GREEN,   "║     └─ Ênfase em Inanição (Starvation)               ║"));
+System.out.println(Ansi.paint(ansi, Ansi.CYAN,    "╟──────────────────────────────────────────────────────╢"));
+System.out.println(Ansi.paint(ansi, Ansi.GREEN,   "║ [2]  MODO ELEMENTAL                                  ║"));
+System.out.println(Ansi.paint(ansi, Ansi.GREEN,   "║     ├─ 4 Pergaminhos Compartilhados                  ║"));
+System.out.println(Ansi.paint(ansi, Ansi.GREEN,   "║     └─ Regiões Independentes de Leitura              ║"));
+System.out.println(Ansi.paint(ansi, Ansi.CYAN,    "╟──────────────────────────────────────────────────────╢"));
+System.out.println(Ansi.paint(ansi, Ansi.YELLOW,  "║   Limitação do Terminal                              ║"));
+System.out.println(Ansi.paint(ansi, Ansi.YELLOW,  "║   Máximo: 7 threads simultâneas                      ║"));
+System.out.println(Ansi.paint(ansi, Ansi.MAGENTA, "╚══════════════════════════════════════════════════════╝"));
+System.out.println();
+System.out.print(Ansi.paint(ansi, Ansi.CYAN, "Escolha uma opção [1-2]: "));
 
             String choice = scanner.nextLine().trim();
             if ("2".equals(choice)) {
