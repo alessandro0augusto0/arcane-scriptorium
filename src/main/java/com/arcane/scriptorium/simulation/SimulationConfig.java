@@ -29,6 +29,21 @@ public record SimulationConfig(
         );
     }
 
+    public static SimulationConfig guidedConfig() {
+        return new SimulationConfig(
+                Duration.ofMinutes(10),
+                5,
+                Duration.ZERO,
+                Duration.ZERO,
+                Duration.ofMillis(4000), 
+                Duration.ofMillis(6000), 
+                Duration.ofMillis(4000),
+                Duration.ofMillis(6000),
+                Duration.ofMillis(5000),
+                Duration.ofMillis(8000)
+        );
+    }
+
     public SimulationConfig withDuration(Duration newDuration) {
         return new SimulationConfig(
                 newDuration,
