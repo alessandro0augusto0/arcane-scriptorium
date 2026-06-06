@@ -22,6 +22,9 @@ public abstract class ArcaneAgent implements Runnable {
     private final EventBus eventBus;
     private final ProcessMetrics metrics;
 
+    private volatile boolean paused = false;
+    private final Object pauseLock = new Object();
+
     protected ArcaneAgent(
             ProcessDescriptor descriptor,
             List<Grimoire> grimoires,
@@ -40,7 +43,9 @@ public abstract class ArcaneAgent implements Runnable {
     public final void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
+                checkPause();
                 rest();
+                checkPause();
                 int targetIndex = ThreadLocalRandom.current().nextInt(grimoires.size());
                 ArcaneSynchronizationCoordinator targetCoordinator = coordinators.get(targetIndex);
                 Grimoire targetGrimoire = grimoires.get(targetIndex);
@@ -64,6 +69,26 @@ public abstract class ArcaneAgent implements Runnable {
 
     protected final ProcessDescriptor descriptor() {
         return descriptor;
+    }
+
+    public void pause() {
+        this.paused = true;
+    }
+
+    public void resume() {
+        this.paused = false;
+        synchronized (pauseLock) {
+            pauseLock.notifyAll();
+        }
+    }
+
+    protected final void checkPause() throws InterruptedException {
+        synchronized (pauseLock) {
+            while (paused) {
+                publish(primaryCoordinator(), EventType.STATE, ProcessState.RESTING, "Simulacao pausada.");
+                pauseLock.wait();
+            }
+        }
     }
 
     protected final SimulationConfig config() {

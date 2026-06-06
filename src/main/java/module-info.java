@@ -2,6 +2,8 @@ module com.arcane.scriptorium {
     requires javafx.controls;
     requires javafx.media;
     requires transitive javafx.graphics;
+    requires com.github.librepdf.openpdf;
+    requires java.desktop;
 
     exports com.arcane.scriptorium;
     exports com.arcane.scriptorium.domain;

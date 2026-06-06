@@ -83,6 +83,41 @@ public final class SimulationEngine {
         return new SimulationEngine(grimoires, coordinators, eventBus, agents);
     }
 
+    public static SimulationEngine automaticScenario(SimulationConfig config, EventBus eventBus, int grimoireCount, 
+                                                     int commonReadersCount, int criticalReadersCount, int writersCount) {
+        List<Grimoire> grimoires = new ArrayList<>();
+        List<ArcaneSynchronizationCoordinator> coordinators = new ArrayList<>();
+
+        for (int i = 0; i < grimoireCount; i++) {
+            grimoires.add(new Grimoire(grimoireCount == 1 ? "Codex Umbrae" : "Grimorio " + (i + 1)));
+            coordinators.add(new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus));
+        }
+
+        List<ProcessDescriptor> descriptors = new ArrayList<>();
+        int idCounter = 1;
+
+        String[] commonNames = {"Mago Harry", "Maga Hermione", "Mago Ron"};
+        for (int i = 0; i < commonReadersCount; i++) {
+            descriptors.add(new ProcessDescriptor(idCounter++, commonNames[i % commonNames.length], AccessRole.COMMON_READER));
+        }
+
+        String[] criticalNames = {"Feiticeiro Voldemort", "Feiticeiro Sauron"};
+        for (int i = 0; i < criticalReadersCount; i++) {
+            descriptors.add(new ProcessDescriptor(idCounter++, criticalNames[i % criticalNames.length], AccessRole.CRITICAL_READER));
+        }
+
+        String[] writerNames = {"Anciao Gandalf", "Anciao Dumbledore"};
+        for (int i = 0; i < writersCount; i++) {
+            descriptors.add(new ProcessDescriptor(idCounter++, writerNames[i % writerNames.length], AccessRole.WRITER));
+        }
+
+        List<ArcaneAgent> agents = descriptors.stream()
+                .map(descriptor -> AgentFactory.create(descriptor, grimoires, coordinators, config, eventBus))
+                .toList();
+
+        return new SimulationEngine(grimoires, coordinators, eventBus, agents);
+    }
+
     public void start() {
         publishSystem("Iniciando simulacao da Biblioteca Arcana.");
         for (ArcaneAgent agent : agents) {
@@ -103,8 +138,30 @@ public final class SimulationEngine {
         publishSystem("Todos os agentes foram encerrados.");
     }
 
+    public void pause() {
+        publishSystem("Pausando a simulacao...");
+        for (ArcaneAgent agent : agents) {
+            agent.pause();
+        }
+    }
+
+    public void resume() {
+        publishSystem("Retomando a simulacao...");
+        for (ArcaneAgent agent : agents) {
+            agent.resume();
+        }
+    }
+
     public List<Grimoire> grimoires() {
         return grimoires;
+    }
+    
+    public List<ArcaneAgent> agents() {
+        return agents;
+    }
+    
+    public SynchronizationSnapshot finalSnapshot() {
+        return primaryCoordinator().snapshot();
     }
 
     public String metricsReport() {

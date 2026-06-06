@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -21,6 +22,26 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.application.Platform;
+import javafx.animation.AnimationTimer;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+
+import com.arcane.scriptorium.simulation.SimulationEngine;
+import com.arcane.scriptorium.simulation.SimulationConfig;
+import com.arcane.scriptorium.events.EventBus;
+import com.arcane.scriptorium.events.SimulationEvent;
+import com.arcane.scriptorium.events.SimulationObserver;
+import com.arcane.scriptorium.events.EventType;
+import com.arcane.scriptorium.domain.ProcessDescriptor;
+import com.arcane.scriptorium.domain.ProcessState;
+import com.arcane.scriptorium.synchronization.SynchronizationSnapshot;
+
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SimulacaoView {
     private enum Mode {
@@ -51,6 +72,24 @@ public class SimulacaoView {
     private Button regionsOneButton;
     private Button regionsFourButton;
     private Button starvationToggle;
+
+    private SimulationEngine engine;
+    private EventBus eventBus;
+    private boolean isPaused = false;
+    
+    private ConcurrentLinkedQueue<SimulationEvent> eventQueue = new ConcurrentLinkedQueue<>();
+    private AnimationTimer uiUpdateTimer;
+    
+    private ObservableList<ProcessDescriptor> waitQueueData = FXCollections.observableArrayList();
+    private LinkedList<String> eventLogs = new LinkedList<>();
+    
+    private VBox logPanelContent;
+    private VBox metricsPanelContent;
+    private VBox reportPanelContent;
+    
+    private Spinner<Integer> commonSpinner;
+    private Spinner<Integer> criticalSpinner;
+    private Spinner<Integer> writerSpinner;
 
     public SimulacaoView(Stage stage) {
         this.stage = stage;
@@ -96,6 +135,10 @@ public class SimulacaoView {
         Button pause = buildTopButton("PAUSE");
         Button stop = buildTopButton("STOP");
         autoControls.getChildren().addAll(play, pause, stop);
+
+        play.setOnAction(e -> handlePlay());
+        pause.setOnAction(e -> handlePause(pause));
+        stop.setOnAction(e -> handleStop());
 
         Text title = new Text("Biblioteca Arcana");
         title.setFont(Font.font("Serif", FontWeight.BOLD, 28));
@@ -161,14 +204,21 @@ public class SimulacaoView {
         stage.close();
     }
 
+    private VBox queueSlotsContainer;
+
     private VBox buildQueuePanel() {
         VBox panel = buildPanel("FILA DE ESPERA");
+        queueSlotsContainer = new VBox(8);
+        
+        ScrollPane scrollPane = new ScrollPane(queueSlotsContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: " + COLOR_PANEL + "; -fx-background-color: transparent; -fx-border-color: transparent;");
+        scrollPane.setPrefViewportHeight(200);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
         panel.getChildren().addAll(
                 buildHint("Magos aguardando para acessar o grimorio."),
-                buildSlot("Mago #01", "Leitor"),
-                buildSlot("Mago #02", "Leitor Critico"),
-                buildSlot("Mago #03", "Escritor"),
-                buildSlot("Mago #04", "Leitor"));
+                scrollPane);
         return panel;
     }
 
@@ -252,7 +302,7 @@ public class SimulacaoView {
     private VBox buildConfigPanel(Mode mode) {
         if (mode == Mode.TESTS) {
             return buildConfigPanelTests();
-        } else if (mode == Mode.CUSTOM) {
+        } else if (mode == Mode.CUSTOM || mode == Mode.AUTOMATIC) {
             return buildConfigPanelCustom();
         }
         return buildConfigPanelGuidedAuto();
@@ -271,6 +321,7 @@ public class SimulacaoView {
 
         Button clearQueue = buildActionButton("Limpar fila");
         Button resetBtn = buildActionButton("Resetar");
+        resetBtn.setOnAction(e -> handleReset());
 
         panel.getChildren().addAll(
                 buildLabelLine("Regioes criticas"),
@@ -301,6 +352,7 @@ public class SimulacaoView {
 
         Button clearQueue = buildActionButton("Limpar fila");
         Button resetBtn = buildActionButton("Resetar");
+        resetBtn.setOnAction(e -> handleReset());
 
         panel.getChildren().addAll(
                 buildLabelLine("Regioes criticas"),
@@ -311,9 +363,9 @@ public class SimulacaoView {
                 starvationToggle,
                 buildSeparator(),
                 buildLabelLine("Quantidade de Magos"),
-                buildSpinnerRow("Leitores comuns"),
-                buildSpinnerRow("Leitores criticos"),
-                buildSpinnerRow("Escritores"),
+                buildSpinnerRow("Leitores comuns", commonSpinner = createSpinner(15)),
+                buildSpinnerRow("Leitores criticos", criticalSpinner = createSpinner(5)),
+                buildSpinnerRow("Escritores", writerSpinner = createSpinner(5)),
                 buildSeparator(),
                 buildLabelLine("Fila"),
                 clearQueue,
@@ -323,7 +375,15 @@ public class SimulacaoView {
         return panel;
     }
 
-    private HBox buildSpinnerRow(String label) {
+    private Spinner<Integer> createSpinner(int defaultValue) {
+        Spinner<Integer> spinner = new Spinner<>(0, 1000, defaultValue);
+        spinner.setEditable(true);
+        spinner.setPrefWidth(70);
+        spinner.setStyle("-fx-base: " + COLOR_BUTTON_BG + ";");
+        return spinner;
+    }
+
+    private HBox buildSpinnerRow(String label, Spinner<Integer> spinner) {
         HBox row = new HBox(8);
         row.setAlignment(Pos.CENTER_LEFT);
         
@@ -333,11 +393,6 @@ public class SimulacaoView {
         
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        
-        Spinner<Integer> spinner = new Spinner<>(0, 100, 0);
-        spinner.setEditable(true);
-        spinner.setPrefWidth(70);
-        spinner.setStyle("-fx-base: " + COLOR_BUTTON_BG + ";");
         
         row.getChildren().addAll(text, spacer, spinner);
         return row;
@@ -351,6 +406,7 @@ public class SimulacaoView {
         regionsFourButton.setOnAction(event -> setCriticalRegions(4));
 
         Button resetBtn = buildActionButton("Resetar");
+        resetBtn.setOnAction(e -> handleReset());
 
         panel.getChildren().addAll(
                 buildLabelLine("Regioes criticas"),
@@ -424,36 +480,41 @@ public class SimulacaoView {
 
     private HBox buildLowerPanels() {
         HBox lower = new HBox(12);
+        
+        metricsPanelContent = new VBox(10);
         VBox metrics = buildPanel("METRICAS EM TEMPO REAL");
         metrics.setMinWidth(360);
-        metrics.getChildren().addAll(
-                buildMetric("Leituras Comuns (Realizadas)", "0"),
-                buildMetric("Leituras Criticas VIPs (Realizadas)", "0"),
-                buildMetric("Escritas (Realizadas)", "0"),
-                buildMetric("Tempo Medio de Espera (Leitor)", "0.0s"),
-                buildMetric("Tempo Medio de Espera (Escritor)", "0.0s"),
-                buildMetric("Engarrafamento Atual (Fila)", "0 magos"));
+        metrics.getChildren().add(metricsPanelContent);
 
+        logPanelContent = new VBox(8);
         VBox log = buildPanel("LOG DE EVENTOS");
         log.setMinWidth(420);
-        log.getChildren().addAll(
-                buildHint("[10:21:15] INFO  Mago #02 iniciou leitura."),
-                buildHint("[10:21:17] INFO  Mago #01 iniciou leitura."),
-                buildHint("[10:21:20] WARN  Escritor aguardando."));
+        
+        ScrollPane logScroll = new ScrollPane(logPanelContent);
+        logScroll.setFitToWidth(true);
+        logScroll.setStyle("-fx-background: " + COLOR_PANEL + "; -fx-background-color: transparent; -fx-border-color: transparent;");
+        logScroll.setPrefViewportHeight(150);
+        VBox.setVgrow(logScroll, Priority.ALWAYS);
+        log.getChildren().add(logScroll);
 
+        reportPanelContent = new VBox(10);
         VBox report = buildPanel("RELATORIO AUTOMATICO");
         report.setMinWidth(260);
-        report.getChildren().addAll(
-                buildMetric("Total de Acessos Concluidos", "0"),
-                buildMetric("Pior Tempo de Espera (Max)", "0.0s"),
-                buildMetric("Intervencoes Anti-Starvation", "0"),
-                buildMetric("Starvation Detectada", "Nao"),
-                buildSeparator(),
-                buildActionButton("Exportar Relatorio"));
+        
+        ScrollPane reportScroll = new ScrollPane(reportPanelContent);
+        reportScroll.setFitToWidth(true);
+        reportScroll.setStyle("-fx-background: " + COLOR_PANEL + "; -fx-background-color: transparent; -fx-border-color: transparent;");
+        reportScroll.setPrefViewportHeight(150);
+        VBox.setVgrow(reportScroll, Priority.ALWAYS);
+        report.getChildren().add(reportScroll);
 
         HBox.setHgrow(log, Priority.ALWAYS);
 
         lower.getChildren().addAll(metrics, log, report);
+        
+        // Setup initial placeholders
+        resetUI();
+        
         return lower;
     }
 
@@ -592,5 +653,252 @@ public class SimulacaoView {
                 "-fx-padding: 8 16 8 16",
                 "-fx-cursor: hand"));
         return button;
+    }
+
+    private void resetUI() {
+        if (queueSlotsContainer != null) {
+            queueSlotsContainer.getChildren().clear();
+        }
+        if (metricsPanelContent != null) {
+            metricsPanelContent.getChildren().clear();
+            metricsPanelContent.getChildren().addAll(
+                buildMetric("Leituras (Comuns + Criticas)", "0"),
+                buildMetric("Escritas (Realizadas)", "0"),
+                buildMetric("Engarrafamento (Fila Comum)", "0 magos"),
+                buildMetric("Engarrafamento (Fila Critica)", "0 magos"),
+                buildMetric("Engarrafamento (Fila Escritor)", "0 magos"),
+                buildMetric("Acessos Ativos (Leitores)", "0"),
+                buildMetric("Escritor Ativo", "Nao")
+            );
+        }
+        if (logPanelContent != null) {
+            logPanelContent.getChildren().clear();
+        }
+        if (reportPanelContent != null) {
+            reportPanelContent.getChildren().clear();
+            reportPanelContent.getChildren().addAll(
+                buildMetric("Total de Acessos Concluidos", "0"),
+                buildMetric("Pior Tempo de Espera (Max)", "0.0s"),
+                buildMetric("Intervencoes Anti-Starvation", "0"),
+                buildMetric("Starvation Detectada", "Nao"),
+                buildSeparator(),
+                buildActionButton("Exportar Relatorio")
+            );
+        }
+        waitQueueData.clear();
+        eventLogs.clear();
+    }
+
+    private void handlePlay() {
+        if (engine != null && isPaused) {
+            isPaused = false;
+            engine.resume();
+            return;
+        }
+        if (engine != null) {
+            return;
+        }
+        
+        eventQueue.clear();
+        if (uiUpdateTimer != null) {
+            uiUpdateTimer.stop();
+        }
+        
+        resetUI();
+        
+        eventBus = new EventBus();
+        eventBus.addObserver(this::onSimulationEvent);
+        
+        uiUpdateTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                processEventQueue();
+            }
+        };
+        uiUpdateTimer.start();
+        
+        SimulationConfig config = starvationEnabled ? 
+            SimulationConfig.defaultConfig() : 
+            SimulationConfig.defaultConfig();
+            
+        int commonCount = commonSpinner != null ? commonSpinner.getValue() : 15;
+        int criticalCount = criticalSpinner != null ? criticalSpinner.getValue() : 5;
+        int writerCount = writerSpinner != null ? writerSpinner.getValue() : 5;
+            
+        engine = SimulationEngine.automaticScenario(config, eventBus, criticalRegions, commonCount, criticalCount, writerCount);
+        engine.start();
+    }
+
+    private void handlePause(Button pauseBtn) {
+        if (engine == null) return;
+        isPaused = !isPaused;
+        if (isPaused) {
+            engine.pause();
+            if (pauseBtn != null) {
+                pauseBtn.setText("RESUME");
+                pauseBtn.setStyle(buildToggleStyle(true));
+            }
+        } else {
+            engine.resume();
+            if (pauseBtn != null) {
+                pauseBtn.setText("PAUSE");
+                pauseBtn.setStyle(String.join(";",
+                    "-fx-background-color: " + COLOR_BUTTON_BG,
+                    "-fx-text-fill: " + COLOR_BUTTON_TEXT,
+                    "-fx-font-family: Serif",
+                    "-fx-font-size: 12px",
+                    "-fx-font-weight: bold",
+                    "-fx-border-color: " + COLOR_ACCENT,
+                    "-fx-border-width: 1",
+                    "-fx-padding: 8 18 8 18",
+                    "-fx-cursor: hand"));
+            }
+        }
+    }
+
+    private void handleStop() {
+        if (engine == null) return;
+        if (isPaused) {
+            handlePause(null);
+        }
+        engine.stop();
+        if (uiUpdateTimer != null) {
+            uiUpdateTimer.stop();
+        }
+        
+        // Process remaining queue
+        processEventQueue();
+        
+        String reportStr = engine.metricsReport();
+        
+        Platform.runLater(() -> {
+            if (reportPanelContent != null) {
+                reportPanelContent.getChildren().clear();
+                Text reportText = new Text(reportStr);
+                reportText.setFont(Font.font("Monospaced", 11));
+                reportText.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+                
+                Button btnExport = buildActionButton("Exportar PDF");
+                btnExport.setStyle("-fx-base: #673AB7; -fx-text-fill: white; -fx-font-weight: bold;");
+                btnExport.setOnAction(e -> handleExportPdf());
+                
+                reportPanelContent.getChildren().addAll(reportText, btnExport);
+            }
+        });
+        
+        isPaused = false;
+    }
+
+    private void handleReset() {
+        if (engine != null) {
+            if (isPaused) {
+                handlePause(null);
+            }
+            engine.stop();
+            engine = null;
+        }
+        if (uiUpdateTimer != null) {
+            uiUpdateTimer.stop();
+        }
+        eventQueue.clear();
+        eventLogs.clear();
+        waitQueueData.clear();
+        isPaused = false;
+        
+        resetUI();
+    }
+    
+    private void handleExportPdf() {
+        if (engine == null) return;
+        
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Salvar Relatorio PDF");
+        fileChooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
+        fileChooser.setInitialFileName("Relatorio_Simulacao_Arcana.pdf");
+        
+        java.io.File file = fileChooser.showSaveDialog(stage);
+        if (file != null) {
+            try {
+                PdfReportGenerator.generateReport(file, engine);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    private void onSimulationEvent(SimulationEvent event) {
+        eventQueue.offer(event);
+    }
+
+    private void processEventQueue() {
+        if (eventQueue.isEmpty()) return;
+        
+        boolean queueUpdated = false;
+        boolean logUpdated = false;
+        SynchronizationSnapshot latestSnap = null;
+        
+        SimulationEvent event;
+        while ((event = eventQueue.poll()) != null) {
+            // Process Log
+            String timestamp = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault()).format(event.timestamp());
+            String type = String.format("%-8s", event.type());
+            String processName = event.process() != null ? event.process().shortName() : "SISTEMA";
+            String state = event.state() != null ? event.state().name() : "-";
+            String logMsg = "[%s] %s | %-16s | %-7s | %s".formatted(timestamp, type, processName, state, event.message());
+            
+            eventLogs.add(logMsg);
+            if (eventLogs.size() > 50) {
+                eventLogs.removeFirst();
+            }
+            logUpdated = true;
+            
+            // Process Queue State
+            if (event.process() != null) {
+                if (event.type() == EventType.WAITING || event.state() == ProcessState.WAITING || event.state() == ProcessState.BLOCKED) {
+                    if (!waitQueueData.contains(event.process())) {
+                        waitQueueData.add(event.process());
+                        queueUpdated = true;
+                    }
+                } else if (event.type() == EventType.ENTERED || event.state() == ProcessState.RESTING || event.state() == ProcessState.STOPPED) {
+                    if (waitQueueData.contains(event.process())) {
+                        waitQueueData.remove(event.process());
+                        queueUpdated = true;
+                    }
+                }
+            }
+            
+            // Capture latest snapshot
+            if (event.snapshot() != null) {
+                latestSnap = event.snapshot();
+            }
+        }
+        
+        // Render Updates
+        if (logUpdated) {
+            logPanelContent.getChildren().clear();
+            for (String log : eventLogs) {
+                logPanelContent.getChildren().add(buildHint(log));
+            }
+        }
+        
+        if (queueUpdated) {
+            queueSlotsContainer.getChildren().clear();
+            for (ProcessDescriptor p : waitQueueData) {
+                queueSlotsContainer.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
+            }
+        }
+        
+        if (latestSnap != null && metricsPanelContent != null) {
+            metricsPanelContent.getChildren().clear();
+            metricsPanelContent.getChildren().addAll(
+                buildMetric("Leituras (Comuns + Criticas)", String.valueOf(latestSnap.completedReads())),
+                buildMetric("Escritas (Realizadas)", String.valueOf(latestSnap.completedWrites())),
+                buildMetric("Engarrafamento (Fila Comum)", latestSnap.waitingCommonReaders() + " magos"),
+                buildMetric("Engarrafamento (Fila Critica)", latestSnap.waitingCriticalReaders() + " magos"),
+                buildMetric("Engarrafamento (Fila Escritor)", latestSnap.waitingWriters() + " magos"),
+                buildMetric("Acessos Ativos (Leitores)", String.valueOf(latestSnap.activeReaders())),
+                buildMetric("Escritor Ativo", latestSnap.writerActive() ? "Sim" : "Nao")
+            );
+        }
     }
 }
