@@ -90,6 +90,10 @@ public class SimulacaoView {
     private Spinner<Integer> commonSpinner;
     private Spinner<Integer> criticalSpinner;
     private Spinner<Integer> writerSpinner;
+    private Spinner<Integer> timerSpinner;
+    
+    private long lastUpdateNano = 0;
+    private double activeTimeSec = 0;
 
     public SimulacaoView(Stage stage) {
         this.stage = stage;
@@ -366,6 +370,9 @@ public class SimulacaoView {
                 buildSpinnerRow("Leitores comuns", commonSpinner = createSpinner(15)),
                 buildSpinnerRow("Leitores criticos", criticalSpinner = createSpinner(5)),
                 buildSpinnerRow("Escritores", writerSpinner = createSpinner(5)),
+                buildSeparator(),
+                buildLabelLine("Tempo Maximo"),
+                buildSpinnerRow("Duração (seg)", timerSpinner = createSpinner(30)),
                 buildSeparator(),
                 buildLabelLine("Fila"),
                 clearQueue,
@@ -709,9 +716,25 @@ public class SimulacaoView {
         eventBus = new EventBus();
         eventBus.addObserver(this::onSimulationEvent);
         
+        lastUpdateNano = System.nanoTime();
+        activeTimeSec = 0;
+        int customTimeLimitSec = (currentMode == Mode.CUSTOM && timerSpinner != null) ? timerSpinner.getValue() : -1;
+        
         uiUpdateTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
+                if (lastUpdateNano == 0) lastUpdateNano = now;
+                double dt = (now - lastUpdateNano) / 1e9;
+                lastUpdateNano = now;
+                
+                if (!isPaused) {
+                    activeTimeSec += dt;
+                    if (customTimeLimitSec > 0 && activeTimeSec >= customTimeLimitSec) {
+                        handleStop();
+                        return;
+                    }
+                }
+                
                 processEventQueue();
             }
         };
