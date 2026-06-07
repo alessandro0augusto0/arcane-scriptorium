@@ -35,22 +35,22 @@ public final class StandaloneConcurrencyValidation {
         List<Failure> failures = new ArrayList<>();
 
         run("stressTestMaintainsMutualExclusionAndInternalCounters", 3,
-                StandaloneConcurrencyValidation::stressTestMaintainsMutualExclusionAndInternalCounters,
+                () -> stressTestMaintainsMutualExclusionAndInternalCounters(new EventBus()),
                 failures);
         run("writerWaitingClosesTurnstileForLateCommonReaders", 1,
-                StandaloneConcurrencyValidation::writerWaitingClosesTurnstileForLateCommonReaders,
+                () -> writerWaitingClosesTurnstileForLateCommonReaders(new EventBus()),
                 failures);
         run("commonReadersWaitingBehindWriterReceiveBoundedTurnAfterWriter", 1,
-                StandaloneConcurrencyValidation::commonReadersWaitingBehindWriterReceiveBoundedTurnAfterWriter,
+                () -> commonReadersWaitingBehindWriterReceiveBoundedTurnAfterWriter(new EventBus()),
                 failures);
         run("criticalReaderVipLimitForcesWriterBeforeNextCriticalReader", 1,
-                StandaloneConcurrencyValidation::criticalReaderVipLimitForcesWriterBeforeNextCriticalReader,
+                () -> criticalReaderVipLimitForcesWriterBeforeNextCriticalReader(new EventBus()),
                 failures);
         run("waitingCountersRecoverAfterInterruptions", 1,
-                StandaloneConcurrencyValidation::waitingCountersRecoverAfterInterruptions,
+                () -> waitingCountersRecoverAfterInterruptions(new EventBus()),
                 failures);
         run("commonReaderBatchQuotaDoesNotSurviveInterruptedReaders", 1,
-                StandaloneConcurrencyValidation::commonReaderBatchQuotaDoesNotSurviveInterruptedReaders,
+                () -> commonReaderBatchQuotaDoesNotSurviveInterruptedReaders(new EventBus()),
                 failures);
 
         if (!failures.isEmpty()) {
@@ -66,10 +66,9 @@ public final class StandaloneConcurrencyValidation {
         System.out.println("All standalone concurrency validation tests passed.");
     }
 
-    private static void stressTestMaintainsMutualExclusionAndInternalCounters() throws Exception {
+    public static void stressTestMaintainsMutualExclusionAndInternalCounters(EventBus eventBus) throws Exception {
         RecordingObserver observer = new RecordingObserver();
-        EventBus eventBus = new EventBus();
-        eventBus.addObserver(observer);
+                eventBus.addObserver(observer);
         ArcaneSynchronizationCoordinator coordinator =
                 new ArcaneSynchronizationCoordinator(VIP_LIMIT, eventBus);
 
@@ -108,10 +107,9 @@ public final class StandaloneConcurrencyValidation {
         check(!coordinator.snapshot().writerActive(), "Escritor ativo restante apos stress.");
     }
 
-    private static void writerWaitingClosesTurnstileForLateCommonReaders() throws Exception {
+    public static void writerWaitingClosesTurnstileForLateCommonReaders(EventBus eventBus) throws Exception {
         RecordingObserver observer = new RecordingObserver();
-        EventBus eventBus = new EventBus();
-        eventBus.addObserver(observer);
+                eventBus.addObserver(observer);
         ArcaneSynchronizationCoordinator coordinator =
                 new ArcaneSynchronizationCoordinator(VIP_LIMIT, eventBus);
 
@@ -168,10 +166,9 @@ public final class StandaloneConcurrencyValidation {
         assertNoSnapshotViolations(observer);
     }
 
-    private static void commonReadersWaitingBehindWriterReceiveBoundedTurnAfterWriter() throws Exception {
+    public static void commonReadersWaitingBehindWriterReceiveBoundedTurnAfterWriter(EventBus eventBus) throws Exception {
         RecordingObserver observer = new RecordingObserver();
-        EventBus eventBus = new EventBus();
-        eventBus.addObserver(observer);
+                eventBus.addObserver(observer);
         ArcaneSynchronizationCoordinator coordinator =
                 new ArcaneSynchronizationCoordinator(VIP_LIMIT, eventBus);
 
@@ -232,10 +229,9 @@ public final class StandaloneConcurrencyValidation {
         assertNoSnapshotViolations(observer);
     }
 
-    private static void criticalReaderVipLimitForcesWriterBeforeNextCriticalReader() throws Exception {
+    public static void criticalReaderVipLimitForcesWriterBeforeNextCriticalReader(EventBus eventBus) throws Exception {
         RecordingObserver observer = new RecordingObserver();
-        EventBus eventBus = new EventBus();
-        eventBus.addObserver(observer);
+                eventBus.addObserver(observer);
         ArcaneSynchronizationCoordinator coordinator = new ArcaneSynchronizationCoordinator(1, eventBus);
 
         CountDownLatch firstReaderInside = new CountDownLatch(1);
@@ -301,10 +297,9 @@ public final class StandaloneConcurrencyValidation {
         assertNoSnapshotViolations(observer);
     }
 
-    private static void waitingCountersRecoverAfterInterruptions() throws Exception {
+    public static void waitingCountersRecoverAfterInterruptions(EventBus eventBus) throws Exception {
         RecordingObserver observer = new RecordingObserver();
-        EventBus eventBus = new EventBus();
-        eventBus.addObserver(observer);
+                eventBus.addObserver(observer);
         ArcaneSynchronizationCoordinator coordinator =
                 new ArcaneSynchronizationCoordinator(VIP_LIMIT, eventBus);
 
@@ -367,10 +362,9 @@ public final class StandaloneConcurrencyValidation {
         assertNoSnapshotViolations(observer);
     }
 
-    private static void commonReaderBatchQuotaDoesNotSurviveInterruptedReaders() throws Exception {
+    public static void commonReaderBatchQuotaDoesNotSurviveInterruptedReaders(EventBus eventBus) throws Exception {
         RecordingObserver observer = new RecordingObserver();
-        EventBus eventBus = new EventBus();
-        eventBus.addObserver(observer);
+                eventBus.addObserver(observer);
         ArcaneSynchronizationCoordinator coordinator =
                 new ArcaneSynchronizationCoordinator(VIP_LIMIT, eventBus);
 

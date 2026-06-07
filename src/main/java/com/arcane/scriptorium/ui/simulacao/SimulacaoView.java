@@ -73,6 +73,14 @@ public class SimulacaoView {
     private Button regionsOneButton;
     private Button regionsFourButton;
     private Button starvationToggle;
+    private boolean cinematicModeEnabled = true;
+
+    private enum TestScenario {
+        STRESS, WRITER_PRIORITY, READER_JUSTICE, VIP_LIMIT, FAILURE_RECOVERY
+    }
+    private TestScenario selectedTestScenario = TestScenario.STRESS;
+    private Button btnTestStress, btnTestWriter, btnTestReader, btnTestVip, btnTestFailure;
+    private String testResultMessage = "";
 
     private SimulationEngine engine;
     private EventBus eventBus;
@@ -198,7 +206,7 @@ public class SimulacaoView {
 
         if (mode == Mode.GUIDED) {
             root.setBottom(buildBottomPanelGuided());
-        } else if (mode == Mode.AUTOMATIC || mode == Mode.CUSTOM) {
+        } else if (mode == Mode.AUTOMATIC || mode == Mode.CUSTOM || mode == Mode.TESTS) {
             root.setBottom(buildBottomPanelAutomatic());
         } else {
             root.setBottom(null);
@@ -366,7 +374,7 @@ public class SimulacaoView {
     }
 
     private VBox buildConfigPanelGuidedAuto() {
-        VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        VBox panel = buildPanel("CONFIGURACOES (MODO GUIADO)");
         regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
         regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
         regionsOneButton.setOnAction(event -> setCriticalRegions(1));
@@ -375,6 +383,10 @@ public class SimulacaoView {
         starvationToggle = buildToggleChip("Starvation: desligado", starvationEnabled);
         starvationToggle.setOnAction(event -> toggleStarvation());
         updateStarvationToggle();
+        
+        Button cinematicModeToggle = buildToggleChip("Modo Cinematico: ligado", cinematicModeEnabled);
+        cinematicModeToggle.setOnAction(event -> toggleCinematicMode(cinematicModeToggle));
+        updateCinematicToggle(cinematicModeToggle);
 
         Button clearQueue = buildActionButton("Limpar fila");
         Button resetBtn = buildActionButton("Resetar");
@@ -387,6 +399,9 @@ public class SimulacaoView {
                 buildSeparator(),
                 buildLabelLine("Starvation"),
                 starvationToggle,
+                buildSeparator(),
+                buildLabelLine("Visuais"),
+                cinematicModeToggle,
                 buildSeparator(),
                 buildLabelLine("Fila"),
                 clearQueue,
@@ -397,15 +412,15 @@ public class SimulacaoView {
     }
 
     private VBox buildConfigPanelCustom(boolean includeTimer) {
-        VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        VBox panel = buildPanel(includeTimer ? "CONFIGURACOES (MODO CUSTOM)" : "CONFIGURACOES (MODO AUTOMATICO)");
         regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
         regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
         regionsOneButton.setOnAction(event -> setCriticalRegions(1));
         regionsFourButton.setOnAction(event -> setCriticalRegions(4));
 
-        starvationToggle = buildToggleChip("Starvation: desligado", starvationEnabled);
-        starvationToggle.setOnAction(event -> toggleStarvation());
-        updateStarvationToggle();
+        Button cinematicModeToggle = buildToggleChip("Modo Cinematico: ligado", cinematicModeEnabled);
+        cinematicModeToggle.setOnAction(event -> toggleCinematicMode(cinematicModeToggle));
+        updateCinematicToggle(cinematicModeToggle);
 
         Button clearQueue = buildActionButton("Limpar fila");
         Button resetBtn = buildActionButton("Resetar");
@@ -416,8 +431,8 @@ public class SimulacaoView {
                 regionsOneButton,
                 regionsFourButton,
                 buildSeparator(),
-                buildLabelLine("Starvation"),
-                starvationToggle,
+                buildLabelLine("Visuais"),
+                cinematicModeToggle,
                 buildSeparator(),
                 buildLabelLine("Quantidade de Magos"),
                 buildSpinnerRow("Leitores comuns", commonSpinner = createSpinner(15)),
@@ -467,30 +482,58 @@ public class SimulacaoView {
     }
 
     private VBox buildConfigPanelTests() {
-        VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
+        VBox panel = buildPanel("CONFIGURACOES (MODO TESTES)");
         regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
         regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
         regionsOneButton.setOnAction(event -> setCriticalRegions(1));
         regionsFourButton.setOnAction(event -> setCriticalRegions(4));
 
+        Button cinematicModeToggle = buildToggleChip("Modo Cinematico: ligado", cinematicModeEnabled);
+        cinematicModeToggle.setOnAction(event -> toggleCinematicMode(cinematicModeToggle));
+        updateCinematicToggle(cinematicModeToggle);
+
         Button resetBtn = buildActionButton("Resetar");
         resetBtn.setOnAction(e -> handleReset());
+
+        btnTestStress = buildToggleChip("Teste de estresse", selectedTestScenario == TestScenario.STRESS);
+        btnTestWriter = buildToggleChip("Prioridade ao escritor", selectedTestScenario == TestScenario.WRITER_PRIORITY);
+        btnTestReader = buildToggleChip("Justica para leitores", selectedTestScenario == TestScenario.READER_JUSTICE);
+        btnTestVip = buildToggleChip("Limite de prioridade VIP", selectedTestScenario == TestScenario.VIP_LIMIT);
+        btnTestFailure = buildToggleChip("Recuperacao de falhas", selectedTestScenario == TestScenario.FAILURE_RECOVERY);
+
+        btnTestStress.setOnAction(e -> selectTestScenario(TestScenario.STRESS));
+        btnTestWriter.setOnAction(e -> selectTestScenario(TestScenario.WRITER_PRIORITY));
+        btnTestReader.setOnAction(e -> selectTestScenario(TestScenario.READER_JUSTICE));
+        btnTestVip.setOnAction(e -> selectTestScenario(TestScenario.VIP_LIMIT));
+        btnTestFailure.setOnAction(e -> selectTestScenario(TestScenario.FAILURE_RECOVERY));
 
         panel.getChildren().addAll(
                 buildLabelLine("Regioes criticas"),
                 regionsOneButton,
                 regionsFourButton,
                 buildSeparator(),
+                buildLabelLine("Visuais"),
+                cinematicModeToggle,
+                buildSeparator(),
                 buildLabelLine("Cenarios de teste"),
-                buildToggleChip("Teste de estresse", false),
-                buildToggleChip("Prioridade ao escritor", false),
-                buildToggleChip("Justica para leitores", false),
-                buildToggleChip("Limite de prioridade VIP", false),
-                buildToggleChip("Recuperacao de falhas", false),
+                btnTestStress,
+                btnTestWriter,
+                btnTestReader,
+                btnTestVip,
+                btnTestFailure,
                 buildSeparator(),
                 buildLabelLine("Controles"),
                 resetBtn);
         return panel;
+    }
+
+    private void selectTestScenario(TestScenario scenario) {
+        selectedTestScenario = scenario;
+        if (btnTestStress != null) btnTestStress.setStyle(buildToggleStyle(scenario == TestScenario.STRESS));
+        if (btnTestWriter != null) btnTestWriter.setStyle(buildToggleStyle(scenario == TestScenario.WRITER_PRIORITY));
+        if (btnTestReader != null) btnTestReader.setStyle(buildToggleStyle(scenario == TestScenario.READER_JUSTICE));
+        if (btnTestVip != null) btnTestVip.setStyle(buildToggleStyle(scenario == TestScenario.VIP_LIMIT));
+        if (btnTestFailure != null) btnTestFailure.setStyle(buildToggleStyle(scenario == TestScenario.FAILURE_RECOVERY));
     }
 
     private void toggleStarvation() {
@@ -505,6 +548,18 @@ public class SimulacaoView {
         String label = starvationEnabled ? "Starvation: ligado" : "Starvation: desligado";
         starvationToggle.setText(label);
         starvationToggle.setStyle(buildToggleStyle(starvationEnabled));
+    }
+
+    private void toggleCinematicMode(Button toggleButton) {
+        cinematicModeEnabled = !cinematicModeEnabled;
+        updateCinematicToggle(toggleButton);
+    }
+
+    private void updateCinematicToggle(Button toggleButton) {
+        if (toggleButton == null) return;
+        String label = cinematicModeEnabled ? "Modo Cinematico: ligado" : "Modo Cinematico: desligado";
+        toggleButton.setText(label);
+        toggleButton.setStyle(buildToggleStyle(cinematicModeEnabled));
     }
 
     private void setCriticalRegions(int regions) {
@@ -776,6 +831,12 @@ public class SimulacaoView {
         }
         
         isSimulationFinished = false;
+
+        if (currentMode == Mode.TESTS) {
+            runTestScenario();
+            return;
+        }
+
         eventQueue.clear();
         if (uiUpdateTimer != null) {
             uiUpdateTimer.stop();
@@ -849,12 +910,66 @@ public class SimulacaoView {
         }
     }
 
+    private void runTestScenario() {
+        eventQueue.clear();
+        if (uiUpdateTimer != null) uiUpdateTimer.stop();
+        resetUI();
+        
+        eventBus = new EventBus();
+        eventBus.addObserver(this::onSimulationEvent);
+        
+        lastUpdateNano = System.nanoTime();
+        activeTimeSec = 0;
+        
+        uiUpdateTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                if (lastUpdateNano == 0) lastUpdateNano = now;
+                double dt = (now - lastUpdateNano) / 1e9;
+                lastUpdateNano = now;
+                activeTimeSec += dt;
+                processEventQueue();
+            }
+        };
+        uiUpdateTimer.start();
+        
+        isPaused = false;
+        isSimulationFinished = false;
+
+        Thread testThread = new Thread(() -> {
+            testResultMessage = "⏳ Executando: " + selectedTestScenario.name() + "...\n";
+            boolean passed = true;
+            try {
+                switch (selectedTestScenario) {
+                    case STRESS -> com.arcane.scriptorium.validation.StandaloneConcurrencyValidation.stressTestMaintainsMutualExclusionAndInternalCounters(eventBus);
+                    case WRITER_PRIORITY -> com.arcane.scriptorium.validation.StandaloneConcurrencyValidation.writerWaitingClosesTurnstileForLateCommonReaders(eventBus);
+                    case READER_JUSTICE -> com.arcane.scriptorium.validation.StandaloneConcurrencyValidation.commonReadersWaitingBehindWriterReceiveBoundedTurnAfterWriter(eventBus);
+                    case VIP_LIMIT -> com.arcane.scriptorium.validation.StandaloneConcurrencyValidation.criticalReaderVipLimitForcesWriterBeforeNextCriticalReader(eventBus);
+                    case FAILURE_RECOVERY -> com.arcane.scriptorium.validation.StandaloneConcurrencyValidation.waitingCountersRecoverAfterInterruptions(eventBus);
+                }
+            } catch (Throwable error) {
+                passed = false;
+                testResultMessage += "\n❌ FALHA NO TESTE!\nMotivo: " + error.getMessage();
+                error.printStackTrace();
+            } finally {
+                if (passed) {
+                    testResultMessage += "\n✅ TESTE CONCLUIDO COM SUCESSO!\nTodas as invariantes validadas.";
+                }
+                Platform.runLater(this::handleStop);
+            }
+        });
+        testThread.setDaemon(true);
+        testThread.start();
+    }
+
     private void handleStop() {
-        if (engine == null || isSimulationFinished) return;
+        if (isSimulationFinished) return;
         if (isPaused) {
             handlePause(null);
         }
-        engine.stop();
+        if (engine != null) {
+            engine.stop();
+        }
         isSimulationFinished = true;
         if (uiUpdateTimer != null) {
             uiUpdateTimer.stop();
@@ -863,12 +978,19 @@ public class SimulacaoView {
         // Process remaining queue
         processEventQueue();
         
-        String reportStr = engine.metricsReport();
+        String reportStr = "Relatorio finalizado.";
+        if (currentMode == Mode.TESTS) {
+            reportStr = testResultMessage;
+        } else if (engine != null) {
+            reportStr = engine.metricsReport();
+        }
+        
+        final String finalReportStr = reportStr;
         
         Platform.runLater(() -> {
             if (reportPanelContent != null) {
                 reportPanelContent.getChildren().clear();
-                Text reportText = new Text(reportStr);
+                Text reportText = new Text(finalReportStr);
                 reportText.setFont(Font.font("Monospaced", 11));
                 reportText.setStyle("-fx-fill: " + COLOR_TEXT + ";");
                 
