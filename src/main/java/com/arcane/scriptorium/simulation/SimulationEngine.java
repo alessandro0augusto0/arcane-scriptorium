@@ -89,7 +89,16 @@ public final class SimulationEngine {
         List<ArcaneSynchronizationCoordinator> coordinators = new ArrayList<>();
 
         for (int i = 0; i < grimoireCount; i++) {
-            grimoires.add(new Grimoire(grimoireCount == 1 ? "Codex Umbrae" : "Grimorio " + (i + 1)));
+            String name;
+            if (grimoireCount == 1) {
+                name = "Codex Umbrae";
+            } else if (grimoireCount == 4) {
+                String[] elementalNames = {"Agua", "Terra", "Fogo", "Ar"};
+                name = elementalNames[i];
+            } else {
+                name = "Grimorio " + (i + 1);
+            }
+            grimoires.add(new Grimoire(name));
             coordinators.add(new ArcaneSynchronizationCoordinator(config.maxCriticalReadersBeforeWriter(), eventBus));
         }
 

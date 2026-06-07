@@ -68,6 +68,7 @@ public class SimulacaoView {
     private BorderPane root;
     private VBox queuePanel;
     private StackPane grimoirePanel;
+    private StackPane regionArenaContainer;
     private HBox autoControls;
     private Button regionsOneButton;
     private Button regionsFourButton;
@@ -76,11 +77,14 @@ public class SimulacaoView {
     private SimulationEngine engine;
     private EventBus eventBus;
     private boolean isPaused = false;
+    private boolean isSimulationFinished = false;
     
     private ConcurrentLinkedQueue<SimulationEvent> eventQueue = new ConcurrentLinkedQueue<>();
     private AnimationTimer uiUpdateTimer;
     
     private ObservableList<ProcessDescriptor> waitQueueData = FXCollections.observableArrayList();
+    private ObservableList<ProcessDescriptor> activeData = FXCollections.observableArrayList();
+    private java.util.Map<ProcessDescriptor, Integer> activeAgentRegionMap = new java.util.concurrent.ConcurrentHashMap<>();
     private LinkedList<String> eventLogs = new LinkedList<>();
     
     private VBox logPanelContent;
@@ -244,7 +248,12 @@ public class SimulacaoView {
 
         VBox regionContainer = new VBox(12);
         regionContainer.setAlignment(Pos.CENTER);
-        regionContainer.getChildren().addAll(title, subtitle, buildRegionArena());
+        
+        regionArenaContainer = new StackPane();
+        VBox.setVgrow(regionArenaContainer, Priority.ALWAYS);
+        regionArenaContainer.getChildren().add(buildRegionArena());
+        
+        regionContainer.getChildren().addAll(title, subtitle, regionArenaContainer);
 
         content.getChildren().add(regionContainer);
         panel.getChildren().add(content);
@@ -260,39 +269,81 @@ public class SimulacaoView {
 
         if (criticalRegions == 1) {
             arena.setPrefSize(420, 240);
-            arena.getChildren().add(buildRegionState("GRIMORIO CENTRAL"));
+            
+            VBox container = new VBox(8);
+            container.setAlignment(Pos.CENTER);
+            container.getChildren().add(buildRegionState("GRIMORIO CENTRAL"));
+            
+            javafx.scene.layout.FlowPane activeTokens = new javafx.scene.layout.FlowPane(8, 8);
+            activeTokens.setAlignment(Pos.CENTER);
+            for (ProcessDescriptor p : activeData) {
+                if (activeTokens.getChildren().size() < 50) { // Limit to 50
+                    activeTokens.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
+                }
+            }
+            container.getChildren().add(activeTokens);
+            arena.getChildren().add(container);
             return arena;
         }
 
-        arena.setPrefSize(460, 280);
+        arena.setPrefSize(560, 320);
         VBox grid = new VBox(12);
         grid.setAlignment(Pos.CENTER);
 
         HBox rowTop = new HBox(12);
         rowTop.setAlignment(Pos.CENTER);
         rowTop.getChildren().addAll(
-                buildRegionTile("GRIMORIO 1"),
-                buildRegionTile("GRIMORIO 2"));
+                buildRegionTile("AGUA", 0),
+                buildRegionTile("TERRA", 1));
 
         HBox rowBottom = new HBox(12);
         rowBottom.setAlignment(Pos.CENTER);
         rowBottom.getChildren().addAll(
-                buildRegionTile("GRIMORIO 3"),
-                buildRegionTile("GRIMORIO 4"));
+                buildRegionTile("FOGO", 2),
+                buildRegionTile("AR", 3));
 
         grid.getChildren().addAll(rowTop, rowBottom);
         arena.getChildren().add(grid);
         return arena;
     }
 
-    private StackPane buildRegionTile(String label) {
+    private StackPane buildRegionTile(String label, int index) {
         StackPane tile = new StackPane();
-        tile.setPrefSize(180, 90);
+        tile.setPrefSize(240, 130);
+        
+        String borderColor = COLOR_ACCENT;
+        if (index == 0) borderColor = "#42a5f5"; // AGUA
+        else if (index == 1) borderColor = "#8d6e63"; // TERRA
+        else if (index == 2) borderColor = "#ef5350"; // FOGO
+        else if (index == 3) borderColor = "#bdbdbd"; // AR
+        
         tile.setStyle("-fx-background-color: #0d1426;" +
-                "-fx-border-color: " + COLOR_ACCENT + ";" +
+                "-fx-border-color: " + borderColor + ";" +
+                "-fx-border-width: 2;" +
                 "-fx-border-radius: 12;" +
                 "-fx-background-radius: 12;");
-        tile.getChildren().add(buildRegionState(label));
+                
+        VBox container = new VBox(8);
+        container.setAlignment(Pos.CENTER);
+        container.getChildren().add(buildRegionState(label));
+        
+        javafx.scene.layout.FlowPane activeTokens = new javafx.scene.layout.FlowPane(4, 4);
+        activeTokens.setAlignment(Pos.CENTER);
+        
+        int tokenCount = 0;
+        for (int i = 0; i < activeData.size(); i++) {
+            ProcessDescriptor p = activeData.get(i);
+            int targetIdx = activeAgentRegionMap.getOrDefault(p, i % 4);
+            if (targetIdx == index) {
+                if (tokenCount < 16) {
+                    activeTokens.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
+                    tokenCount++;
+                }
+            }
+        }
+        
+        container.getChildren().add(activeTokens);
+        tile.getChildren().add(container);
         return tile;
     }
 
@@ -306,8 +357,10 @@ public class SimulacaoView {
     private VBox buildConfigPanel(Mode mode) {
         if (mode == Mode.TESTS) {
             return buildConfigPanelTests();
-        } else if (mode == Mode.CUSTOM || mode == Mode.AUTOMATIC) {
-            return buildConfigPanelCustom();
+        } else if (mode == Mode.CUSTOM) {
+            return buildConfigPanelCustom(true);
+        } else if (mode == Mode.AUTOMATIC) {
+            return buildConfigPanelCustom(false);
         }
         return buildConfigPanelGuidedAuto();
     }
@@ -343,7 +396,7 @@ public class SimulacaoView {
         return panel;
     }
 
-    private VBox buildConfigPanelCustom() {
+    private VBox buildConfigPanelCustom(boolean includeTimer) {
         VBox panel = buildPanel("CONFIGURACOES DA SIMULACAO");
         regionsOneButton = buildToggleChip("1 grimorio", criticalRegions == 1);
         regionsFourButton = buildToggleChip("4 grimorios", criticalRegions == 4);
@@ -369,10 +422,18 @@ public class SimulacaoView {
                 buildLabelLine("Quantidade de Magos"),
                 buildSpinnerRow("Leitores comuns", commonSpinner = createSpinner(15)),
                 buildSpinnerRow("Leitores criticos", criticalSpinner = createSpinner(5)),
-                buildSpinnerRow("Escritores", writerSpinner = createSpinner(5)),
+                buildSpinnerRow("Escritores", writerSpinner = createSpinner(5))
+        );
+        
+        if (includeTimer) {
+            panel.getChildren().addAll(
                 buildSeparator(),
                 buildLabelLine("Tempo Maximo"),
-                buildSpinnerRow("Duração (seg)", timerSpinner = createSpinner(30)),
+                buildSpinnerRow("Duração (seg)", timerSpinner = createSpinner(30))
+            );
+        }
+        
+        panel.getChildren().addAll(
                 buildSeparator(),
                 buildLabelLine("Fila"),
                 clearQueue,
@@ -452,8 +513,10 @@ public class SimulacaoView {
         }
         criticalRegions = regions;
         updateRegionToggleStyles();
-        grimoirePanel.getChildren().clear();
-        grimoirePanel.getChildren().add(buildGrimoirePanel().getChildren().get(0));
+        if (regionArenaContainer != null) {
+            regionArenaContainer.getChildren().clear();
+            regionArenaContainer.getChildren().add(buildRegionArena());
+        }
     }
 
     private void updateRegionToggleStyles() {
@@ -666,6 +729,12 @@ public class SimulacaoView {
         if (queueSlotsContainer != null) {
             queueSlotsContainer.getChildren().clear();
         }
+        activeData.clear();
+        activeAgentRegionMap.clear();
+        if (regionArenaContainer != null) {
+            regionArenaContainer.getChildren().clear();
+            regionArenaContainer.getChildren().add(buildRegionArena());
+        }
         if (metricsPanelContent != null) {
             metricsPanelContent.getChildren().clear();
             metricsPanelContent.getChildren().addAll(
@@ -697,15 +766,16 @@ public class SimulacaoView {
     }
 
     private void handlePlay() {
-        if (engine != null && isPaused) {
+        if (engine != null && isPaused && !isSimulationFinished) {
             isPaused = false;
             engine.resume();
             return;
         }
-        if (engine != null) {
+        if (engine != null && !isSimulationFinished) {
             return;
         }
         
+        isSimulationFinished = false;
         eventQueue.clear();
         if (uiUpdateTimer != null) {
             uiUpdateTimer.stop();
@@ -780,11 +850,12 @@ public class SimulacaoView {
     }
 
     private void handleStop() {
-        if (engine == null) return;
+        if (engine == null || isSimulationFinished) return;
         if (isPaused) {
             handlePause(null);
         }
         engine.stop();
+        isSimulationFinished = true;
         if (uiUpdateTimer != null) {
             uiUpdateTimer.stop();
         }
@@ -826,6 +897,8 @@ public class SimulacaoView {
         eventQueue.clear();
         eventLogs.clear();
         waitQueueData.clear();
+        activeData.clear();
+        activeAgentRegionMap.clear();
         isPaused = false;
         
         resetUI();
@@ -858,6 +931,7 @@ public class SimulacaoView {
         
         boolean queueUpdated = false;
         boolean logUpdated = false;
+        boolean regionUpdated = false;
         SynchronizationSnapshot latestSnap = null;
         
         SimulationEvent event;
@@ -875,17 +949,44 @@ public class SimulacaoView {
             }
             logUpdated = true;
             
-            // Process Queue State
+            // Process Queue and Region State
             if (event.process() != null) {
                 if (event.type() == EventType.WAITING || event.state() == ProcessState.WAITING || event.state() == ProcessState.BLOCKED) {
                     if (!waitQueueData.contains(event.process())) {
                         waitQueueData.add(event.process());
                         queueUpdated = true;
                     }
-                } else if (event.type() == EventType.ENTERED || event.state() == ProcessState.RESTING || event.state() == ProcessState.STOPPED) {
+                } else if (event.type() == EventType.ENTERED) {
                     if (waitQueueData.contains(event.process())) {
                         waitQueueData.remove(event.process());
                         queueUpdated = true;
+                    }
+                    if (!activeData.contains(event.process())) {
+                        activeData.add(event.process());
+                        regionUpdated = true;
+                    }
+                } else if (event.type() == EventType.STATE && (event.state() == ProcessState.READING || event.state() == ProcessState.WRITING)) {
+                    if (event.message() != null && event.process() != null) {
+                        String msg = event.message().toUpperCase();
+                        int regionIndex = 0; // fallback to 0
+                        if (msg.contains("AGUA")) regionIndex = 0;
+                        else if (msg.contains("TERRA")) regionIndex = 1;
+                        else if (msg.contains("FOGO")) regionIndex = 2;
+                        else if (msg.contains("AR")) regionIndex = 3;
+                        
+                        // Set specific target
+                        activeAgentRegionMap.put(event.process(), regionIndex);
+                        regionUpdated = true;
+                    }
+                } else if (event.type() == EventType.EXITED || event.state() == ProcessState.RESTING || event.state() == ProcessState.STOPPED) {
+                    if (waitQueueData.contains(event.process())) {
+                        waitQueueData.remove(event.process());
+                        queueUpdated = true;
+                    }
+                    if (activeData.contains(event.process())) {
+                        activeData.remove(event.process());
+                        activeAgentRegionMap.remove(event.process());
+                        regionUpdated = true;
                     }
                 }
             }
@@ -909,6 +1010,11 @@ public class SimulacaoView {
             for (ProcessDescriptor p : waitQueueData) {
                 queueSlotsContainer.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
             }
+        }
+        
+        if (regionUpdated && regionArenaContainer != null) {
+            regionArenaContainer.getChildren().clear();
+            regionArenaContainer.getChildren().add(buildRegionArena());
         }
         
         if (latestSnap != null && metricsPanelContent != null) {
