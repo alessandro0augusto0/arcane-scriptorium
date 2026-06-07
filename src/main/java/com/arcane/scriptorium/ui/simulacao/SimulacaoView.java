@@ -233,6 +233,7 @@ public class SimulacaoView {
             .withDuration(java.time.Duration.ofHours(24));
             
         engine = SimulationEngine.automaticScenario(config, eventBus, criticalRegions, 0, 0, 0);
+        engine.setStarvationPreventionEnabled(!starvationEnabled);
         engine.start();
         
         isPaused = false;
@@ -602,6 +603,9 @@ public class SimulacaoView {
     private void toggleStarvation() {
         starvationEnabled = !starvationEnabled;
         updateStarvationToggle();
+        if (engine != null) {
+            engine.setStarvationPreventionEnabled(!starvationEnabled);
+        }
     }
 
     private void updateStarvationToggle() {
@@ -965,6 +969,7 @@ public class SimulacaoView {
         int writerCount = writerSpinner != null ? writerSpinner.getValue() : 5;
             
         engine = SimulationEngine.automaticScenario(config, eventBus, criticalRegions, commonCount, criticalCount, writerCount);
+        engine.setStarvationPreventionEnabled(!starvationEnabled);
         engine.start();
     }
 

@@ -172,6 +172,13 @@ public final class SimulationEngine {
         }
     }
 
+    public void setStarvationPreventionEnabled(boolean preventStarvation) {
+        for (ArcaneSynchronizationCoordinator coordinator : coordinators) {
+            coordinator.setStarvationPreventionEnabled(preventStarvation);
+        }
+    }
+
+
     private void spawnManualProcess(String name, AccessRole role, Duration accessTime) {
         ProcessDescriptor descriptor = new ProcessDescriptor(manualIdGenerator.getAndIncrement(), name, role);
         SimulationConfig customConfig = SimulationConfig.manualInjectionConfig(accessTime);
