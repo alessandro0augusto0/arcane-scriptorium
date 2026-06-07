@@ -631,10 +631,7 @@ public class SimulacaoView {
         }
         criticalRegions = regions;
         updateRegionToggleStyles();
-        if (regionArenaContainer != null) {
-            regionArenaContainer.getChildren().clear();
-            regionArenaContainer.getChildren().add(buildRegionArena());
-        }
+        handleReset();
     }
 
     private void updateRegionToggleStyles() {
