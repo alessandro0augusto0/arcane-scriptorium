@@ -792,15 +792,20 @@ public class SimulacaoView {
     }
 
     private HBox buildMetric(String label, String value) {
+        return buildMetric(label, value, COLOR_TITLE);
+    }
+
+    private HBox buildMetric(String label, String value, String valueColor) {
         HBox row = new HBox(8);
         row.setAlignment(Pos.CENTER_LEFT);
+        
         Text labelText = new Text(label + ":");
         labelText.setFont(Font.font("Serif", 12));
         labelText.setStyle("-fx-fill: " + COLOR_TEXT + ";");
 
         Text valueText = new Text(value);
         valueText.setFont(Font.font("Serif", FontWeight.BOLD, 12));
-        valueText.setStyle("-fx-fill: " + COLOR_TITLE + ";");
+        valueText.setStyle("-fx-fill: " + valueColor + ";");
 
         row.getChildren().addAll(labelText, valueText);
         return row;
@@ -888,7 +893,8 @@ public class SimulacaoView {
                 buildMetric("Engarrafamento (Fila Critica)", "0 magos"),
                 buildMetric("Engarrafamento (Fila Escritor)", "0 magos"),
                 buildMetric("Acessos Ativos (Leitores)", "0"),
-                buildMetric("Escritor Ativo", "Nao")
+                buildMetric("Escritor Ativo", "Nao"),
+                buildMetric("Starvation Detectada", "Nao")
             );
         }
         if (logPanelContent != null) {
@@ -1073,6 +1079,14 @@ public class SimulacaoView {
             reportStr = testResultMessage;
         } else if (engine != null) {
             reportStr = engine.metricsReport();
+            
+            com.arcane.scriptorium.synchronization.SynchronizationSnapshot latestSnap = engine.finalSnapshot();
+            if (latestSnap != null) {
+                boolean isStarving = starvationEnabled && latestSnap.waitingWriters() > 0 && latestSnap.activeReaders() > 0;
+                if (isStarving) {
+                    reportStr += "\n\n[ALERTA CRITICO]\nStarvation Detectada: SIM (ESCRITOR PRESO!)";
+                }
+            }
         }
         
         final String finalReportStr = reportStr;
@@ -1234,6 +1248,10 @@ public class SimulacaoView {
         }
         
         if (latestSnap != null && metricsPanelContent != null) {
+            boolean isStarving = starvationEnabled && latestSnap.waitingWriters() > 0 && latestSnap.activeReaders() > 0;
+            String starvationText = isStarving ? "SIM (ESCRITOR PRESO!)" : "Nao";
+            String starvationColor = isStarving ? "#ff4444" : COLOR_TITLE;
+
             metricsPanelContent.getChildren().clear();
             metricsPanelContent.getChildren().addAll(
                 buildMetric("Leituras (Comuns + Criticas)", String.valueOf(latestSnap.completedReads())),
@@ -1242,7 +1260,8 @@ public class SimulacaoView {
                 buildMetric("Engarrafamento (Fila Critica)", latestSnap.waitingCriticalReaders() + " magos"),
                 buildMetric("Engarrafamento (Fila Escritor)", latestSnap.waitingWriters() + " magos"),
                 buildMetric("Acessos Ativos (Leitores)", String.valueOf(latestSnap.activeReaders())),
-                buildMetric("Escritor Ativo", latestSnap.writerActive() ? "Sim" : "Nao")
+                buildMetric("Escritor Ativo", latestSnap.writerActive() ? "Sim" : "Nao"),
+                buildMetric("Starvation Detectada", starvationText, starvationColor)
             );
         }
     }
