@@ -163,6 +163,15 @@ public final class SimulationEngine {
         spawnManualProcess("Escritor " + manualIdGenerator.get(), AccessRole.WRITER, accessTime);
     }
 
+    public void interruptAgent(int agentId) {
+        for (int i = 0; i < agents.size(); i++) {
+            if (agents.get(i).descriptor().id() == agentId) {
+                threads.get(i).interrupt();
+                break;
+            }
+        }
+    }
+
     private void spawnManualProcess(String name, AccessRole role, Duration accessTime) {
         ProcessDescriptor descriptor = new ProcessDescriptor(manualIdGenerator.getAndIncrement(), name, role);
         SimulationConfig customConfig = SimulationConfig.manualInjectionConfig(accessTime);

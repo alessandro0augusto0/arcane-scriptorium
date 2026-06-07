@@ -74,7 +74,7 @@ public abstract class ArcaneAgent implements Runnable {
         return metrics.snapshot();
     }
 
-    protected final ProcessDescriptor descriptor() {
+    public final ProcessDescriptor descriptor() {
         return descriptor;
     }
 

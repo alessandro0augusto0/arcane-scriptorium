@@ -435,6 +435,13 @@ public class SimulacaoView {
         updateCinematicToggle(cinematicModeToggle);
 
         Button clearQueue = buildActionButton("Limpar fila");
+        clearQueue.setOnAction(e -> {
+            if (engine != null) {
+                for (com.arcane.scriptorium.domain.ProcessDescriptor p : waitQueueData) {
+                    engine.interruptAgent(p.id());
+                }
+            }
+        });
         Button resetBtn = buildActionButton("Resetar");
         resetBtn.setOnAction(e -> handleReset());
 
@@ -472,6 +479,13 @@ public class SimulacaoView {
         updateCinematicToggle(cinematicModeToggle);
 
         Button clearQueue = buildActionButton("Limpar fila");
+        clearQueue.setOnAction(e -> {
+            if (engine != null) {
+                for (com.arcane.scriptorium.domain.ProcessDescriptor p : waitQueueData) {
+                    engine.interruptAgent(p.id());
+                }
+            }
+        });
         Button resetBtn = buildActionButton("Resetar");
         resetBtn.setOnAction(e -> handleReset());
 
@@ -662,17 +676,17 @@ public class SimulacaoView {
 
         controls.getChildren().addAll(btnAddReader, btnAddWriter, btnAddVip);
 
-        bottom.getChildren().addAll(controls, buildLowerPanels());
+        bottom.getChildren().addAll(controls, buildLowerPanels(false));
         return bottom;
     }
 
     private VBox buildBottomPanelAutomatic() {
         VBox bottom = new VBox(12);
-        bottom.getChildren().add(buildLowerPanels());
+        bottom.getChildren().add(buildLowerPanels(true));
         return bottom;
     }
 
-    private HBox buildLowerPanels() {
+    private HBox buildLowerPanels(boolean includeReport) {
         HBox lower = new HBox(12);
         
         metricsPanelContent = new VBox(10);
@@ -691,20 +705,25 @@ public class SimulacaoView {
         VBox.setVgrow(logScroll, Priority.ALWAYS);
         log.getChildren().add(logScroll);
 
-        reportPanelContent = new VBox(10);
-        VBox report = buildPanel("RELATORIO AUTOMATICO");
-        report.setMinWidth(260);
-        
-        ScrollPane reportScroll = new ScrollPane(reportPanelContent);
-        reportScroll.setFitToWidth(true);
-        reportScroll.setStyle("-fx-background: " + COLOR_PANEL + "; -fx-background-color: transparent; -fx-border-color: transparent;");
-        reportScroll.setPrefViewportHeight(150);
-        VBox.setVgrow(reportScroll, Priority.ALWAYS);
-        report.getChildren().add(reportScroll);
-
         HBox.setHgrow(log, Priority.ALWAYS);
+        lower.getChildren().addAll(metrics, log);
 
-        lower.getChildren().addAll(metrics, log, report);
+        if (includeReport) {
+            reportPanelContent = new VBox(10);
+            VBox report = buildPanel("RELATORIO AUTOMATICO");
+            report.setMinWidth(260);
+            
+            ScrollPane reportScroll = new ScrollPane(reportPanelContent);
+            reportScroll.setFitToWidth(true);
+            reportScroll.setStyle("-fx-background: " + COLOR_PANEL + "; -fx-background-color: transparent; -fx-border-color: transparent;");
+            reportScroll.setPrefViewportHeight(150);
+            VBox.setVgrow(reportScroll, Priority.ALWAYS);
+            report.getChildren().add(reportScroll);
+
+            lower.getChildren().add(report);
+        } else {
+            reportPanelContent = null;
+        }
         
         // Setup initial placeholders
         resetUI();
