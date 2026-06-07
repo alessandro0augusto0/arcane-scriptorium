@@ -81,6 +81,7 @@ public class SimulacaoView {
     private TestScenario selectedTestScenario = TestScenario.STRESS;
     private Button btnTestStress, btnTestWriter, btnTestReader, btnTestVip, btnTestFailure;
     private String testResultMessage = "";
+    private javafx.scene.control.Spinner<Integer> guidedTimeSpinner;
 
     private SimulationEngine engine;
     private EventBus eventBus;
@@ -126,6 +127,9 @@ public class SimulacaoView {
         root.setCenter(grimoirePanel);
         root.setRight(configPanel);
         applyMode(currentMode);
+        if (currentMode == Mode.GUIDED) {
+            startGuidedEnvironment();
+        }
         BorderPane.setMargin(root.getTop(), new Insets(16, 24, 8, 24));
         BorderPane.setMargin(root.getLeft(), new Insets(8, 12, 8, 24));
         BorderPane.setMargin(root.getCenter(), new Insets(8, 12, 8, 12));
@@ -191,6 +195,48 @@ public class SimulacaoView {
         }
         currentMode = mode;
         applyMode(mode);
+        if (mode == Mode.GUIDED) {
+            startGuidedEnvironment();
+        } else {
+            handleStop();
+        }
+    }
+
+    private void startGuidedEnvironment() {
+        if (engine != null) {
+            handleStop();
+        }
+        eventQueue.clear();
+        if (uiUpdateTimer != null) uiUpdateTimer.stop();
+        resetUI();
+        
+        eventBus = new EventBus();
+        eventBus.addObserver(this::onSimulationEvent);
+        
+        lastUpdateNano = System.nanoTime();
+        activeTimeSec = 0;
+        
+        uiUpdateTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                if (lastUpdateNano == 0) lastUpdateNano = now;
+                double dt = (now - lastUpdateNano) / 1e9;
+                lastUpdateNano = now;
+                activeTimeSec += dt;
+                processEventQueue();
+            }
+        };
+        uiUpdateTimer.start();
+        
+        com.arcane.scriptorium.simulation.SimulationConfig config = 
+            com.arcane.scriptorium.simulation.SimulationConfig.defaultConfig()
+            .withDuration(java.time.Duration.ofHours(24));
+            
+        engine = SimulationEngine.automaticScenario(config, eventBus, criticalRegions, 0, 0, 0);
+        engine.start();
+        
+        isPaused = false;
+        isSimulationFinished = false;
     }
 
     private void applyMode(Mode mode) {
@@ -403,6 +449,9 @@ public class SimulacaoView {
                 buildLabelLine("Visuais"),
                 cinematicModeToggle,
                 buildSeparator(),
+                buildLabelLine("Tempo de Acesso"),
+                buildSpinnerRow("Duracao (seg)", guidedTimeSpinner = createSpinner(5)),
+                buildSeparator(),
                 buildLabelLine("Fila"),
                 clearQueue,
                 buildSeparator(),
@@ -588,10 +637,30 @@ public class SimulacaoView {
 
         HBox controls = new HBox(12);
         controls.setAlignment(Pos.CENTER_LEFT);
-        controls.getChildren().addAll(
-                buildActionButton("Adicionar Leitor"),
-                buildActionButton("Adicionar Escritor"),
-                buildActionButton("Adicionar Leitor Critico"));
+        
+        Button btnAddReader = buildActionButton("Adicionar Leitor");
+        Button btnAddWriter = buildActionButton("Adicionar Escritor");
+        Button btnAddVip = buildActionButton("Adicionar Leitor Critico");
+        
+        btnAddReader.setOnAction(e -> {
+            if (engine != null && guidedTimeSpinner != null) {
+                engine.spawnManualCommonReader(java.time.Duration.ofSeconds(guidedTimeSpinner.getValue()));
+            }
+        });
+        
+        btnAddWriter.setOnAction(e -> {
+            if (engine != null && guidedTimeSpinner != null) {
+                engine.spawnManualWriter(java.time.Duration.ofSeconds(guidedTimeSpinner.getValue()));
+            }
+        });
+        
+        btnAddVip.setOnAction(e -> {
+            if (engine != null && guidedTimeSpinner != null) {
+                engine.spawnManualCriticalReader(java.time.Duration.ofSeconds(guidedTimeSpinner.getValue()));
+            }
+        });
+
+        controls.getChildren().addAll(btnAddReader, btnAddWriter, btnAddVip);
 
         bottom.getChildren().addAll(controls, buildLowerPanels());
         return bottom;
@@ -1022,8 +1091,12 @@ public class SimulacaoView {
         activeData.clear();
         activeAgentRegionMap.clear();
         isPaused = false;
+        isSimulationFinished = false;
         
         resetUI();
+        if (currentMode == Mode.GUIDED) {
+            startGuidedEnvironment();
+        }
     }
     
     private void handleExportPdf() {

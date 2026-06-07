@@ -9,10 +9,13 @@ import com.arcane.scriptorium.events.SimulationEvent;
 import com.arcane.scriptorium.synchronization.ArcaneSynchronizationCoordinator;
 import com.arcane.scriptorium.synchronization.SynchronizationSnapshot;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class SimulationEngine {
     private final List<Grimoire> grimoires;
@@ -20,6 +23,7 @@ public final class SimulationEngine {
     private final EventBus eventBus;
     private final List<ArcaneAgent> agents;
     private final List<Thread> threads;
+    private final AtomicInteger manualIdGenerator = new AtomicInteger(5000);
 
     private SimulationEngine(
             List<Grimoire> grimoires,
@@ -29,8 +33,8 @@ public final class SimulationEngine {
         this.grimoires = grimoires;
         this.coordinators = coordinators;
         this.eventBus = eventBus;
-        this.agents = agents;
-        this.threads = new ArrayList<>();
+        this.agents = new CopyOnWriteArrayList<>(agents);
+        this.threads = new CopyOnWriteArrayList<>();
     }
 
     public static SimulationEngine defaultScenario(SimulationConfig config, EventBus eventBus) {
@@ -146,6 +150,31 @@ public final class SimulationEngine {
         }
         publishSystem("Todos os agentes foram encerrados.");
     }
+
+    public void spawnManualCommonReader(Duration accessTime) {
+        spawnManualProcess("Leitor C. " + manualIdGenerator.get(), AccessRole.COMMON_READER, accessTime);
+    }
+
+    public void spawnManualCriticalReader(Duration accessTime) {
+        spawnManualProcess("VIP " + manualIdGenerator.get(), AccessRole.CRITICAL_READER, accessTime);
+    }
+
+    public void spawnManualWriter(Duration accessTime) {
+        spawnManualProcess("Escritor " + manualIdGenerator.get(), AccessRole.WRITER, accessTime);
+    }
+
+    private void spawnManualProcess(String name, AccessRole role, Duration accessTime) {
+        ProcessDescriptor descriptor = new ProcessDescriptor(manualIdGenerator.getAndIncrement(), name, role);
+        SimulationConfig customConfig = SimulationConfig.manualInjectionConfig(accessTime);
+        ArcaneAgent agent = AgentFactory.create(descriptor, grimoires, coordinators, customConfig, eventBus);
+        
+        agent.setOneShot(true);
+        agents.add(agent);
+        Thread thread = new Thread(agent, agent.metrics().process().label());
+        threads.add(thread);
+        thread.start();
+    }
+
 
     public void pause() {
         publishSystem("Pausando a simulacao...");

@@ -44,6 +44,21 @@ public record SimulationConfig(
         );
     }
 
+    public static SimulationConfig manualInjectionConfig(Duration accessTime) {
+        return new SimulationConfig(
+                Duration.ofHours(24),
+                5,
+                Duration.ZERO,
+                Duration.ZERO,
+                accessTime, 
+                accessTime, 
+                accessTime,
+                accessTime,
+                accessTime,
+                accessTime
+        );
+    }
+
     public SimulationConfig withDuration(Duration newDuration) {
         return new SimulationConfig(
                 newDuration,

@@ -24,6 +24,12 @@ public abstract class ArcaneAgent implements Runnable {
 
     private volatile boolean paused = false;
     private final Object pauseLock = new Object();
+    
+    private boolean isOneShot = false;
+
+    public void setOneShot(boolean oneShot) {
+        this.isOneShot = oneShot;
+    }
 
     protected ArcaneAgent(
             ProcessDescriptor descriptor,
@@ -55,6 +61,7 @@ public abstract class ArcaneAgent implements Runnable {
                     enterCriticalRegion(targetGrimoire, targetCoordinator);
                     Thread.sleep(activityDuration().toMillis());
                 }
+                if (isOneShot) break;
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
