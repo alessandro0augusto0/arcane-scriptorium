@@ -51,6 +51,56 @@ public class SimulacaoView {
         CUSTOM
     }
 
+    private static class ImageCache {
+        private static final java.util.Map<String, javafx.scene.image.Image> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+        public static javafx.scene.image.Image getImage(String name) {
+            return CACHE.computeIfAbsent(name, k -> {
+                try {
+                    java.io.InputStream is = SimulacaoView.class.getResourceAsStream("/assets/" + k + ".png");
+                    if (is != null) {
+                        return new javafx.scene.image.Image(is);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
+        }
+    }
+
+    private javafx.scene.image.Image getImageForProcess(ProcessDescriptor process, ProcessState state) {
+        String name = process.shortName().toLowerCase();
+        String baseName = "harry"; // Fallback padrão de segurança
+
+        if (name.contains("harry")) baseName = "harry";
+        else if (name.contains("hermione")) baseName = "hermione";
+        else if (name.contains("ron")) baseName = "ron";
+        else if (name.contains("voldemort")) baseName = "voldemort";
+        else if (name.contains("sauron")) baseName = "sauron";
+        else if (name.contains("dumbledore")) baseName = "dumbledore";
+        else if (name.contains("gandalf")) baseName = "gandalf";
+        else {
+            if (process.role() == com.arcane.scriptorium.domain.AccessRole.WRITER) baseName = "gandalf";
+            else if (process.role() == com.arcane.scriptorium.domain.AccessRole.CRITICAL_READER) baseName = "sauron";
+        }
+
+        String suffix = "_idle";
+        if (state != null) {
+            switch (state) {
+                case BLOCKED:
+                case WAITING: suffix = "_frozen"; break;
+                case RESTING:
+                case STOPPED: suffix = "_idle"; break;
+                case READING: suffix = "_reading"; break;
+                case WRITING: suffix = "_writing"; break;
+                default: suffix = "_idle"; break;
+            }
+        }
+
+        return ImageCache.getImage(baseName + suffix);
+    }
+
     private static final String COLOR_BG = "#0b0f1c";
     private static final String COLOR_PANEL = "#121728";
     private static final String COLOR_PANEL_BORDER = "#3b2a4f";
@@ -94,6 +144,7 @@ public class SimulacaoView {
     private ObservableList<ProcessDescriptor> waitQueueData = FXCollections.observableArrayList();
     private ObservableList<ProcessDescriptor> activeData = FXCollections.observableArrayList();
     private java.util.Map<ProcessDescriptor, Integer> activeAgentRegionMap = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<ProcessDescriptor, ProcessState> processStateMap = new java.util.concurrent.ConcurrentHashMap<>();
     private LinkedList<String> eventLogs = new LinkedList<>();
     
     private VBox logPanelContent;
@@ -325,15 +376,27 @@ public class SimulacaoView {
         if (criticalRegions == 1) {
             arena.setPrefSize(420, 240);
             
+            if (cinematicModeEnabled) {
+                javafx.scene.image.Image img = ImageCache.getImage("grimoire_main");
+                if (img != null) {
+                    javafx.scene.image.ImageView bg = new javafx.scene.image.ImageView(img);
+                    bg.setFitWidth(128);
+                    bg.setFitHeight(128);
+                    bg.setPreserveRatio(true);
+                    arena.getChildren().add(bg);
+                }
+            }
+            
             VBox container = new VBox(8);
             container.setAlignment(Pos.CENTER);
             container.getChildren().add(buildRegionState("GRIMORIO CENTRAL"));
             
-            javafx.scene.layout.FlowPane activeTokens = new javafx.scene.layout.FlowPane(8, 8);
+            javafx.scene.layout.FlowPane activeTokens = new javafx.scene.layout.FlowPane(16, 16);
             activeTokens.setAlignment(Pos.CENTER);
             for (ProcessDescriptor p : activeData) {
                 if (activeTokens.getChildren().size() < 50) { // Limit to 50
-                    activeTokens.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
+                    ProcessState state = processStateMap.getOrDefault(p, p.role() == com.arcane.scriptorium.domain.AccessRole.WRITER ? ProcessState.WRITING : ProcessState.READING);
+                    activeTokens.getChildren().add(buildSlot(p, state));
                 }
             }
             container.getChildren().add(activeTokens);
@@ -378,12 +441,24 @@ public class SimulacaoView {
                 "-fx-border-radius: 12;" +
                 "-fx-background-radius: 12;");
                 
+        if (cinematicModeEnabled) {
+            String[] grimoires = {"grimoire_water", "grimoire_earth", "grimoire_fire", "grimoire_air"};
+            javafx.scene.image.Image img = ImageCache.getImage(grimoires[index % 4]);
+            if (img != null) {
+                javafx.scene.image.ImageView bg = new javafx.scene.image.ImageView(img);
+                bg.setFitWidth(80);
+                bg.setFitHeight(80);
+                bg.setPreserveRatio(true);
+                tile.getChildren().add(bg);
+            }
+        }
+
         VBox container = new VBox(8);
         container.setAlignment(Pos.CENTER);
         container.getChildren().add(buildRegionState(label));
         
-        javafx.scene.layout.FlowPane activeTokens = new javafx.scene.layout.FlowPane(4, 4);
-        activeTokens.setAlignment(Pos.CENTER);
+        javafx.scene.layout.FlowPane activeTokens = new javafx.scene.layout.FlowPane(8, 8);
+            activeTokens.setAlignment(Pos.CENTER);
         
         int tokenCount = 0;
         for (int i = 0; i < activeData.size(); i++) {
@@ -391,7 +466,8 @@ public class SimulacaoView {
             int targetIdx = activeAgentRegionMap.getOrDefault(p, i % 4);
             if (targetIdx == index) {
                 if (tokenCount < 16) {
-                    activeTokens.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
+                    ProcessState state = processStateMap.getOrDefault(p, p.role() == com.arcane.scriptorium.domain.AccessRole.WRITER ? ProcessState.WRITING : ProcessState.READING);
+                    activeTokens.getChildren().add(buildSlot(p, state));
                     tokenCount++;
                 }
             }
@@ -620,6 +696,17 @@ public class SimulacaoView {
     private void toggleCinematicMode(Button toggleButton) {
         cinematicModeEnabled = !cinematicModeEnabled;
         updateCinematicToggle(toggleButton);
+        if (regionArenaContainer != null) {
+            regionArenaContainer.getChildren().clear();
+            regionArenaContainer.getChildren().add(buildRegionArena());
+        }
+        if (queueSlotsContainer != null) {
+            queueSlotsContainer.getChildren().clear();
+            for (ProcessDescriptor p : waitQueueData) {
+                ProcessState state = processStateMap.getOrDefault(p, ProcessState.WAITING);
+                queueSlotsContainer.getChildren().add(buildSlot(p, state));
+            }
+        }
     }
 
     private void updateCinematicToggle(Button toggleButton) {
@@ -772,23 +859,42 @@ public class SimulacaoView {
         return text;
     }
 
-    private HBox buildSlot(String name, String role) {
-        HBox row = new HBox(8);
-        row.setAlignment(Pos.CENTER_LEFT);
-        Label tag = new Label(role);
-        tag.setStyle("-fx-background-color: #1b2033;" +
-                "-fx-text-fill: " + COLOR_TEXT + ";" +
-                "-fx-padding: 2 6 2 6;" +
-                "-fx-border-color: " + COLOR_ACCENT + ";" +
-                "-fx-border-radius: 6;" +
-                "-fx-background-radius: 6;" +
-                "-fx-font-size: 11px;");
+    private javafx.scene.Node buildSlot(ProcessDescriptor process, ProcessState state) {
+        if (!cinematicModeEnabled) {
+            HBox row = new HBox(8);
+            row.setAlignment(Pos.CENTER_LEFT);
+            Label tag = new Label(process.role().displayName());
+            tag.setStyle("-fx-background-color: #1b2033;" +
+                    "-fx-text-fill: " + COLOR_TEXT + ";" +
+                    "-fx-padding: 2 6 2 6;" +
+                    "-fx-border-color: " + COLOR_ACCENT + ";" +
+                    "-fx-border-radius: 6;" +
+                    "-fx-background-radius: 6;" +
+                    "-fx-font-size: 11px;");
 
-        Text label = new Text(name);
-        label.setFont(Font.font("Serif", 12));
-        label.setStyle("-fx-fill: " + COLOR_TEXT + ";");
-        row.getChildren().addAll(label, tag);
-        return row;
+            Text label = new Text(process.shortName());
+            label.setFont(Font.font("Serif", 12));
+            label.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+            row.getChildren().addAll(label, tag);
+            return row;
+        } else {
+            HBox row = new HBox(12);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setPadding(new javafx.geometry.Insets(4));
+            javafx.scene.image.Image img = getImageForProcess(process, state);
+            if (img != null) {
+                javafx.scene.image.ImageView view = new javafx.scene.image.ImageView(img);
+                view.setFitWidth(64);
+                view.setFitHeight(64);
+                view.setPreserveRatio(true);
+                row.getChildren().add(view);
+            }
+            Text label = new Text(process.shortName());
+            label.setFont(Font.font("Serif", 12));
+            label.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+            row.getChildren().add(label);
+            return row;
+        }
     }
 
     private HBox buildMetric(String label, String value) {
@@ -1166,6 +1272,9 @@ public class SimulacaoView {
         
         SimulationEvent event;
         while ((event = eventQueue.poll()) != null) {
+            if (event.process() != null && event.state() != null) {
+                processStateMap.put(event.process(), event.state());
+            }
             // Process Log
             String timestamp = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault()).format(event.timestamp());
             String type = String.format("%-8s", event.type());
@@ -1238,7 +1347,8 @@ public class SimulacaoView {
         if (queueUpdated) {
             queueSlotsContainer.getChildren().clear();
             for (ProcessDescriptor p : waitQueueData) {
-                queueSlotsContainer.getChildren().add(buildSlot(p.shortName(), p.role().displayName()));
+                ProcessState state = processStateMap.getOrDefault(p, ProcessState.WAITING);
+                queueSlotsContainer.getChildren().add(buildSlot(p, state));
             }
         }
         

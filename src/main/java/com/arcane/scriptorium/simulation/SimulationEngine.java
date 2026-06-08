@@ -152,15 +152,21 @@ public final class SimulationEngine {
     }
 
     public void spawnManualCommonReader(Duration accessTime) {
-        spawnManualProcess("Leitor C. " + manualIdGenerator.get(), AccessRole.COMMON_READER, accessTime);
+        String[] names = {"Mago Harry", "Maga Hermione", "Mago Ron"};
+        String chosen = names[java.util.concurrent.ThreadLocalRandom.current().nextInt(names.length)];
+        spawnManualProcess(chosen, AccessRole.COMMON_READER, accessTime);
     }
 
     public void spawnManualCriticalReader(Duration accessTime) {
-        spawnManualProcess("VIP " + manualIdGenerator.get(), AccessRole.CRITICAL_READER, accessTime);
+        String[] names = {"Feiticeiro Voldemort", "Feiticeiro Sauron"};
+        String chosen = names[java.util.concurrent.ThreadLocalRandom.current().nextInt(names.length)];
+        spawnManualProcess(chosen, AccessRole.CRITICAL_READER, accessTime);
     }
 
     public void spawnManualWriter(Duration accessTime) {
-        spawnManualProcess("Escritor " + manualIdGenerator.get(), AccessRole.WRITER, accessTime);
+        String[] names = {"Anciao Gandalf", "Anciao Dumbledore"};
+        String chosen = names[java.util.concurrent.ThreadLocalRandom.current().nextInt(names.length)];
+        spawnManualProcess(chosen, AccessRole.WRITER, accessTime);
     }
 
     public void interruptAgent(int agentId) {
