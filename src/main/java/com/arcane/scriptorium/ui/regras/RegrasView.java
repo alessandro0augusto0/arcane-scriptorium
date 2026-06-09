@@ -5,6 +5,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -15,8 +17,8 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 
 public class RegrasView {
-    private static final double WIDTH = 800;
-    private static final double HEIGHT = 600;
+    private static final double WIDTH = 1200;
+    private static final double HEIGHT = 800;
 
     private static final String COLOR_BG = "#1a1a2e";
     private static final String COLOR_TITLE = "#f0c040";
@@ -66,131 +68,166 @@ public class RegrasView {
     }
 
     private ScrollPane buildRulesScroll() {
-        TextFlow flow = new TextFlow();
-        flow.setPadding(new Insets(16));
-        flow.setStyle("-fx-background-color: #0d0d1a;");
-        flow.setPrefWidth(WIDTH - 60);
+        VBox contentBox = new VBox(15);
+        contentBox.setPadding(new Insets(16));
+        contentBox.setStyle("-fx-background-color: #0d0d1a;");
+        contentBox.setPrefWidth(WIDTH - 60);
 
-        flow.getChildren().addAll(
-                section("1. O PROBLEMA CLASSICO DOS LEITORES E ESCRITORES"),
+        contentBox.getChildren().addAll(
+                section("1. O PROBLEMA CLÁSSICO (CONTEXTO TEÓRICO)"),
                 paragraph(
-                        "O problema dos Leitores e Escritores e um classico de sincronizacao " +
-                                "concorrente formalizado por Courtois, Heymans e Parnas em 1971 e " +
-                                "popularizado por Andrew S. Tanenbaum em 'Sistemas Operacionais Modernos'. " +
-                                "Ele modela uma situacao em que multiplas threads compartilham um recurso, " +
-                                "como um banco de dados, arquivo ou, neste simulador, um grimorio magico."),
+                        "O problema dos Leitores e Escritores é um clássico de sincronização " +
+                                "concorrente formalizado por Courtois, Heymans e Parnas (1971) e " +
+                                "amplamente discutido por Tanenbaum. O dilema principal surge quando " +
+                                "múltiplas threads concorrentes precisam acessar um recurso compartilhado. " +
+                                "Para garantir a integridade dos dados, devemos permitir múltiplas " +
+                                "leituras simultâneas, mas garantir exclusão mútua absoluta durante as " +
+                                "operações de escrita. Um dos maiores perigos neste cenário é a " +
+                                "Inanição (Starvation), onde threads podem esperar indefinidamente " +
+                                "pelo acesso ao recurso sem nunca serem atendidas."),
 
-                section("2. PAPEIS: LEITORES E ESCRITORES"),
+                section("2. A CAIXA FORTE DO GRIMÓRIO (A METÁFORA DO MONITOR)"),
                 paragraph(
-                        "LEITORES (Readers): sao threads que apenas consultam o recurso compartilhado. " +
-                                "Multiplos leitores podem acessar o recurso simultaneamente, pois a leitura " +
-                                "nao altera o estado dos dados. Na Biblioteca Arcana, os leitores sao " +
-                                "aprendizes de magia que consultam os grimorios ao mesmo tempo."),
+                        "Imagine um corredor de segurança máxima.\n" +
+                        "No final dele existe uma Porta de Titânio (criticalRegionGate) protegendo o Grimório Arcano " +
+                        "— a própria Região Crítica do sistema.\n\n" +
+                        "Antes de alcançar a porta, todo mago precisa passar por uma sala de triagem controlada por:"),
+                item("- Catraca Arcana -> policyMutex (ReentrantLock)"),
+                item("- Scanner de Retina -> stateChanged + canEnter()"),
+                item("- Porta de Titânio -> criticalRegionGate (Semaphore binário)"),
+                item("- Câmara de Criogenia -> await() do Java Condition"),
+
+                buildLargeImage("file:///C:/Dev/arcane-scriptorium/docs/images/arcane-library-overview.png"),
+
+                section("3. FLUXO DE EXECUÇÃO PASSO A PASSO"),
+                paragraph("1. O Primeiro Leitor"),
                 paragraph(
-                        "ESCRITORES (Writers): sao threads que modificam o recurso compartilhado. " +
-                                "Um escritor exige acesso exclusivo: nenhum outro leitor ou escritor pode " +
-                                "estar presente enquanto ele escreve. Na Biblioteca Arcana, os escritores sao " +
-                                "magos que inscrevem novos feiticos nos grimorios."),
-
-                section("3. REGRAS DE SINCRONIZACAO"),
-                paragraph("As seguintes invariantes devem ser respeitadas a todo momento:"),
-                item("- Multiplos leitores podem ler ao mesmo tempo (leitura concorrente)."),
-                item("- Apenas um escritor pode escrever por vez (exclusao mutua)."),
-                item("- Leitores e escritores nao podem acessar o recurso simultaneamente."),
-                item("- Nenhuma thread deve esperar indefinidamente (ausencia de starvation idealmente)."),
-
-                section("4. O PROBLEMA DO STARVATION (INANICAO)"),
+                        "Um leitor comum entra no sistema:\n" +
+                        "• bloqueia a catraca (policyMutex.lock())\n" +
+                        "• passa pelo scanner (canEnter(COMMON_READER))\n" +
+                        "• aumenta activeReaders\n" +
+                        "• o primeiro leitor abre a porta da região crítica (criticalRegionGate.acquire())\n\n" +
+                        "Enquanto houver leitores ativos, novos leitores podem compartilhar o acesso simultaneamente."),
+                
+                paragraph("2. O Escritor é Bloqueado"),
                 paragraph(
-                        "Starvation ocorre quando uma ou mais threads nunca conseguem acesso ao " +
-                                "recurso porque outras threads monopolizam o acesso. Existem dois cenarios " +
-                                "classicos de starvation neste problema:"),
+                        "Quando um escritor chega:\n" +
+                        "• ele passa pela catraca\n" +
+                        "• o scanner detecta leitores ativos\n" +
+                        "• o acesso é negado\n" +
+                        "• waitingWriters++ ativa o alerta de prioridade\n" +
+                        "• a thread entra em stateChanged.await()\n\n" +
+                        "O escritor é suspenso até que a região crítica fique totalmente livre."),
+
+                paragraph("3. Proteção Contra Starvation"),
                 paragraph(
-                        "STARVATION DOS ESCRITORES: Se novos leitores chegam continuamente antes " +
-                                "que o ultimo leitor saia, o contador de leitores ativos nunca chega a zero. " +
-                                "Isso impede que qualquer escritor obtenha o mutex, podendo esperar " +
-                                "indefinidamente. E a politica 'Leitores tem prioridade'."),
+                        "Se novos leitores comuns chegarem enquanto há escritores esperando:\n" +
+                        "• o scanner bloqueia novos leitores\n" +
+                        "• isso impede starvation dos escritores\n" +
+                        "• as threads também entram em espera (await())"),
+
+                paragraph("4. Leitores VIP Ignoram a Fila"),
                 paragraph(
-                        "STARVATION DOS LEITORES: Simetricamente, se novos escritores chegam " +
-                                "continuamente, os leitores nunca obtem acesso. Isso e mais raro em " +
-                                "implementacoes classicas, mas pode ocorrer com politicas de 'Escritores " +
-                                "tem prioridade'."),
+                        "Leitores críticos (CRITICAL_READER) possuem prioridade especial:\n" +
+                        "• conseguem entrar mesmo com escritores aguardando\n" +
+                        "• respeitam apenas o limite máximo configurado\n" +
+                        "• compartilham a região crítica com outros leitores\n\n" +
+                        "Isso simula um sistema híbrido de prioridade."),
 
-                section("5. SEMAFOROS E MECANISMOS DE CONTROLE"),
+                paragraph("5. Saída da Região Crítica"),
                 paragraph(
-                        "A solucao classica de Tanenbaum utiliza dois semaforos e uma variavel " +
-                                "de contagem:"),
-                item("- mutex: semaforo binario que protege a variavel 'leitoresAtivos'."),
-                item("- db (database): semaforo binario que controla o acesso exclusivo ao recurso."),
-                item("- leitoresAtivos: variavel inteira que conta leitores atualmente no recurso."),
+                        "Quando os leitores terminam:\n" +
+                        "• activeReaders--\n" +
+                        "• o último leitor fecha a porta (criticalRegionGate.release())\n" +
+                        "• o sistema executa stateChanged.signalAll()\n\n" +
+                        "Todas as threads congeladas são acordadas."),
+
+                paragraph("6. Reavaliação das Threads"),
                 paragraph(
-                        "Quando o primeiro leitor chega (leitoresAtivos vai de 0 para 1), ele executa " +
-                                "wait(db), bloqueando escritores. Quando o ultimo leitor sai (leitoresAtivos " +
-                                "volta a 0), ele executa signal(db), liberando escritores. Cada escritor " +
-                                "executa wait(db) para ter acesso exclusivo e signal(db) ao terminar."),
+                        "Após o signalAll():\n" +
+                        "• todas as threads disputam novamente o mutex\n" +
+                        "• cada uma reexecuta canEnter()\n" +
+                        "• o escritor finalmente consegue exclusividade\n" +
+                        "• leitores posteriores voltam para espera caso necessário"),
 
-                section("6. PSEUDOCODIGO DA SOLUCAO (TANENBAUM - 1A VERSAO)"),
-                code(
-                        "// Variaveis globais\n" +
-                                "semaforo mutex = 1;        // protege leitoresAtivos\n" +
-                                "semaforo db    = 1;        // controla acesso ao recurso\n" +
-                                "int leitoresAtivos = 0;    // numero de leitores no recurso\n\n" +
-                                "// Thread LEITOR\n" +
-                                "leitor() {\n" +
-                                "  while (true) {\n" +
-                                "    wait(mutex);           // entra na secao critica da contagem\n" +
-                                "    leitoresAtivos++;\n" +
-                                "    if (leitoresAtivos == 1)\n" +
-                                "      wait(db);           // primeiro leitor bloqueia escritores\n" +
-                                "    signal(mutex);         // libera mutex\n\n" +
-                                "    // LEITURA DO RECURSO\n" +
-                                "    lerRecurso();\n\n" +
-                                "    wait(mutex);           // entra na secao critica da contagem\n" +
-                                "    leitoresAtivos--;\n" +
-                                "    if (leitoresAtivos == 0)\n" +
-                                "      signal(db);         // ultimo leitor libera escritores\n" +
-                                "    signal(mutex);         // libera mutex\n" +
-                                "  }\n" +
-                                "}\n\n" +
-                                "// Thread ESCRITOR\n" +
-                                "escritor() {\n" +
-                                "  while (true) {\n" +
-                                "    wait(db);             // espera acesso exclusivo\n" +
-                                "    // ESCRITA NO RECURSO\n" +
-                                "    escreverRecurso();\n" +
-                                "    signal(db);           // libera o recurso\n" +
-                                "  }\n" +
-                                "}"),
-
-                section("7. POLITICAS DE SINCRONIZACAO"),
-                paragraph("Para resolver o problema do starvation dos escritores, existem politicas alternativas:"),
-                item(
-                        "- FIFO (Fila): todas as threads sao atendidas em ordem de chegada, " +
-                                "sem prioridade. Justa, mas pode reduzir a concorrencia de leitores."),
-                item(
-                        "- Prioridade para Escritores: quando um escritor esta esperando, " +
-                                "novos leitores sao bloqueados. Elimina o starvation dos escritores, " +
-                                "mas pode causar starvation dos leitores."),
-                item(
-                        "- Prioridade para Leitores: comportamento padrao da 1a versao de " +
-                                "Tanenbaum. Leitores sempre tem precedencia. Pode causar starvation " +
-                                "dos escritores."),
-                item(
-                        "- Alternancia Justa: apos cada escritor, um grupo de leitores e " +
-                                "liberado e vice-versa, garantindo progresso para ambos os lados."),
-
-                section("8. APLICACAO NA BIBLIOTECA ARCANA"),
+                section("4. OBJETIVOS DO COORDENADOR & MATRIZ DE CONCEITOS"),
                 paragraph(
-                        "Neste simulador, cada grimorio representa um recurso compartilhado. " +
-                                "Threads-aprendizes (leitores) consultam os grimorios para copiar feiticos. " +
-                                "Threads-magos (escritores) inscrevem novos feiticos e modificam o grimorio. " +
-                                "O simulador demonstra visualmente os estados de cada thread " +
-                                "(aguardando, lendo, escrevendo, concluido) e os semaforos em tempo real, " +
-                                "permitindo observar as situacoes de starvation e a eficacia de cada " +
-                                "politica de sincronizacao."),
+                        "O ArcaneSynchronizationCoordinator garante:\n" +
+                        "• Exclusão mútua para escritores\n" +
+                        "• Leitura concorrente segura\n" +
+                        "• Prevenção de starvation\n" +
+                        "• Priorização controlada para leitores críticos\n" +
+                        "• Coordenação usando Semaphore, Lock e Condition"),
+                item("Exclusão Mútua = Mutex (policyMutex)"),
+                item("Região Crítica = criticalRegionGate"),
+                item("Readers-Writers Problem = Coordenação híbrida"),
+                item("Condition Variables = stateChanged.await()"),
+                item("Wake-up coletivo = signalAll()"),
+                item("Starvation Prevention = waitingWriters"),
+                item("Threads concorrentes = Agentes arcanos"),
 
-                paragraph("\n\n"));
+                section("5. MANUAL DOS TOKENS ARCANOS (CATÁLOGO GRÁFICO)"),
+                buildImageRow("harry_reading", "Leitor Comum Ativo", "Consultando o grimório. Múltiplos podem ler juntos."),
+                buildImageRow("harry_frozen", "Leitor Comum Bloqueado", "Congelado no Monitor. Aguardando o Escritor sair ou cota de lote."),
+                buildImageRow("voldemort_reading", "Leitor Crítico (VIP)", "Tem prioridade sobre novos escritores, até o limite de rajada."),
+                buildImageRow("gandalf_writing", "Escritor Ativo", "Possui exclusividade absoluta. Altera a região crítica."),
+                buildImageRow("gandalf_frozen", "Escritor Bloqueado", "Aguardando a sala esvaziar para entrar."),
+                buildImageRow("grimoire_main", "O Grimório", "A região crítica protegida pelo Semaphore."),
 
-        ScrollPane scroll = new ScrollPane(flow);
+                section("6. DEMONSTRAÇÕES DE TOKENS"),
+                
+                section("🟢 Leitores Comuns (COMMON_READER)"),
+                item("Harry"),
+                buildImageRow("harry_idle", "Parado na fila", "harry_idle.png"),
+                buildImageRow("harry_frozen", "Congelado no Wait Set", "harry_frozen.png"),
+                buildImageRow("harry_reading", "Lendo o Grimório", "harry_reading.png"),
+                
+                item("Ron"),
+                buildImageRow("ron_idle", "Parado na fila", "ron_idle.png"),
+                buildImageRow("ron_frozen", "Congelado no Wait Set", "ron_frozen.png"),
+                buildImageRow("ron_reading", "Lendo o Grimório", "ron_reading.png"),
+
+                item("Hermione"),
+                buildImageRow("hermione_idle", "Parado na fila", "hermione_idle.png"),
+                buildImageRow("hermione_frozen", "Congelado no Wait Set", "hermione_frozen.png"),
+                buildImageRow("hermione_reading", "Lendo o Grimório", "hermione_reading.png"),
+
+                section("🟣 Leitores Críticos - VIP (CRITICAL_READER)"),
+                item("Voldemort"),
+                buildImageRow("voldemort_idle", "Parado na fila", "voldemort_idle.png"),
+                buildImageRow("voldemort_frozen", "Congelado no Wait Set", "voldemort_frozen.png"),
+                buildImageRow("voldemort_reading", "Lendo o Grimório", "voldemort_reading.png"),
+
+                item("Sauron"),
+                buildImageRow("sauron_idle", "Parado na fila", "sauron_idle.png"),
+                buildImageRow("sauron_frozen", "Congelado no Wait Set", "sauron_frozen.png"),
+                buildImageRow("sauron_reading", "Lendo o Grimório", "sauron_reading.png"),
+
+                section("🔴 Escritores (WRITER)"),
+                item("Gandalf"),
+                buildImageRow("gandalf_idle", "Parado na fila", "gandalf_idle.png"),
+                buildImageRow("gandalf_frozen", "Congelado no Wait Set", "gandalf_frozen.png"),
+                buildImageRow("gandalf_writing", "Escrevendo no Grimório", "gandalf_writing.png"),
+
+                item("Dumbledore"),
+                buildImageRow("dumbledore_idle", "Parado na fila", "dumbledore_idle.png"),
+                buildImageRow("dumbledore_frozen", "Congelado no Wait Set", "dumbledore_frozen.png"),
+                buildImageRow("dumbledore_writing", "Escrevendo no Grimório", "dumbledore_writing.png"),
+
+                section("📚 Grimórios (Regiões Críticas)"),
+                item("Codex Umbrae (Principal)"),
+                buildImageRow("grimoire_main", "Região Crítica Principal", "grimoire_main.png"),
+                item("Grimório da Água"),
+                buildImageRow("grimoire_water", "Domínio Elemental", "grimoire_water.png"),
+                item("Grimório da Terra"),
+                buildImageRow("grimoire_earth", "Domínio Elemental", "grimoire_earth.png"),
+                item("Grimório do Fogo"),
+                buildImageRow("grimoire_fire", "Domínio Elemental", "grimoire_fire.png"),
+                item("Grimório do Ar"),
+                buildImageRow("grimoire_air", "Domínio Elemental", "grimoire_air.png")
+        );
+
+        ScrollPane scroll = new ScrollPane(contentBox);
         scroll.setFitToWidth(true);
         scroll.setStyle(
                 "-fx-background: #0d0d1a;" +
@@ -245,31 +282,66 @@ public class RegrasView {
         return footer;
     }
 
-    private Text section(String content) {
-        Text text = new Text("\n" + content + "\n");
+    private TextFlow section(String content) {
+        Text text = new Text(content);
         text.setFont(Font.font("Serif", FontWeight.BOLD, 15));
         text.setStyle("-fx-fill: " + COLOR_SUBTITLE + ";");
-        return text;
+        return new TextFlow(text);
     }
 
-    private Text paragraph(String content) {
-        Text text = new Text("\n" + content + "\n");
+    private TextFlow paragraph(String content) {
+        Text text = new Text(content);
         text.setFont(Font.font("Serif", 13));
         text.setStyle("-fx-fill: " + COLOR_TEXT + ";");
-        return text;
+        return new TextFlow(text);
     }
 
-    private Text item(String content) {
-        Text text = new Text("\n  " + content);
+    private TextFlow item(String content) {
+        Text text = new Text(content);
         text.setFont(Font.font("Serif", 13));
         text.setStyle("-fx-fill: " + COLOR_HIGHLIGHT + ";");
-        return text;
+        TextFlow flow = new TextFlow(text);
+        flow.setPadding(new Insets(0, 0, 0, 16));
+        return flow;
     }
 
-    private Text code(String content) {
-        Text text = new Text("\n" + content + "\n");
+    private TextFlow code(String content) {
+        Text text = new Text(content);
         text.setFont(Font.font("Monospace", 11));
         text.setStyle("-fx-fill: #7ec8e3;");
-        return text;
+        return new TextFlow(text);
+    }
+
+    private HBox buildImageRow(String imagePath, String title, String description) {
+        Image img = new Image(getClass().getResourceAsStream("/assets/" + imagePath + ".png"));
+        ImageView imageView = new ImageView(img);
+        imageView.setFitWidth(128);
+        imageView.setFitHeight(128);
+
+        Text titleText = new Text(title);
+        titleText.setFont(Font.font("Serif", FontWeight.BOLD, 20));
+        titleText.setStyle("-fx-fill: " + COLOR_HIGHLIGHT + ";");
+
+        Text descText = new Text(description);
+        descText.setFont(Font.font("Serif", 16));
+        descText.setStyle("-fx-fill: " + COLOR_TEXT + ";");
+
+        VBox textBox = new VBox(5, titleText, new TextFlow(descText));
+
+        HBox row = new HBox(25, imageView, textBox);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private HBox buildLargeImage(String url) {
+        Image img = new Image(url);
+        ImageView imageView = new ImageView(img);
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(WIDTH - 100);
+
+        HBox box = new HBox(imageView);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(20, 0, 20, 0));
+        return box;
     }
 }
