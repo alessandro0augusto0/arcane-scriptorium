@@ -1,6 +1,53 @@
 # Arcane Scriptorium
 
-Simulacao academica em Java para o problema dos leitores e escritores, com leitores comuns, leitores criticos e escritores disputando o acesso a um grimorio compartilhado.
+## Trabalho Acadêmico — Sistemas Operacionais
+
+Este projeto foi desenvolvido como parte da disciplina de **Sistemas Operacionais** no curso de **Engenharia de Computação do IFSULDEMINAS**.
+
+**Professor:** Douglas Nunes<br>
+**Aluno:** Alessandro Augusto
+
+<div align="center">
+
+![IFSULDEMINAS](https://img.shields.io/badge/IFSULDEMINAS-Engenharia%20de%20Computação-006B3F?style=for-the-badge&logoColor=white)
+
+</div>
+
+## ⚙️ Tecnologias Utilizadas
+
+<p align="left">
+  <img src="https://skillicons.dev/icons?i=java,maven" />
+
+  <img height="48" src="https://img.shields.io/badge/JavaFX-FF6600?style=flat&logo=openjdk&logoColor=white" />
+</p>
+
+* Java 21
+* Maven
+* JavaFX
+
+### Descrição do Problema
+
+Este trabalho apresenta uma solução para o clássico **Problema dos Leitores e Escritores (Readers-Writers Problem)** através de uma simulação temática denominada **Biblioteca Arcana**.
+
+No cenário proposto, magos acessam grimórios raros armazenados em uma biblioteca mágica. Esses grimórios representam recursos compartilhados que precisam ser protegidos contra acessos concorrentes inadequados.
+
+O sistema contempla três tipos de agentes:
+
+* **Leitores Comuns**: realizam consultas simultâneas ao grimório.
+* **Leitores Críticos**: possuem prioridade elevada de acesso.
+* **Escritores**: executam modificações que exigem exclusividade total sobre o recurso.
+
+A implementação busca garantir:
+
+* Consistência dos dados compartilhados;
+* Exclusão mútua para operações de escrita;
+* Leitura concorrente segura;
+* Prevenção de condições de corrida (*race conditions*);
+* Mitigação de *starvation* para leitores e escritores;
+* Balanceamento entre desempenho e justiça no escalonamento.
+
+Para isso, são utilizados mecanismos de sincronização da plataforma Java, incluindo **Locks**, **Conditions** e **Semaphores**, além de políticas de prioridade controladas para leitores críticos.
+
 
 ## Arquitetura
 
