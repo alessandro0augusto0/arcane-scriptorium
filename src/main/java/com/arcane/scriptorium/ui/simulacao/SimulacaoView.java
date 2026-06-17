@@ -73,13 +73,13 @@ public class SimulacaoView {
         String name = process.shortName().toLowerCase();
         String baseName = "harry"; // Fallback padrão de segurança
 
-        if (name.contains("harry")) baseName = "harry";
-        else if (name.contains("hermione")) baseName = "hermione";
-        else if (name.contains("ron")) baseName = "ron";
-        else if (name.contains("voldemort")) baseName = "voldemort";
+        if (name.contains("voldemort")) baseName = "voldemort";
         else if (name.contains("sauron")) baseName = "sauron";
         else if (name.contains("dumbledore")) baseName = "dumbledore";
         else if (name.contains("gandalf")) baseName = "gandalf";
+        else if (name.contains("hermione")) baseName = "hermione";
+        else if (name.contains("harry")) baseName = "harry";
+        else if (name.contains("ron")) baseName = "ron";
         else {
             if (process.role() == com.arcane.scriptorium.domain.AccessRole.WRITER) baseName = "gandalf";
             else if (process.role() == com.arcane.scriptorium.domain.AccessRole.CRITICAL_READER) baseName = "sauron";
