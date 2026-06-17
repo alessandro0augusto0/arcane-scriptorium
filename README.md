@@ -120,6 +120,19 @@ java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.va
 
 O documento [docs/concurrency-validation.md](docs/concurrency-validation.md) descreve os invariantes testados e as limitacoes conhecidas.
 
+## 🚀 Comandos Rápidos (Cheatsheet)
+
+Para facilitar a execução diária, aqui estão os principais comandos usando Maven no terminal:
+
+| Ação | Comando Maven |
+|------|---------------|
+| **Rodar Interface Gráfica (GUI)** | `mvn javafx:run` |
+| **Rodar no Terminal (CLI)** | `mvn compile exec:java` |
+| **Rodar todos os testes** | `mvn test` |
+| **Limpar e rodar testes do zero** | `mvn clean test` |
+| **Limpar projeto e recompilar** | `mvn clean compile` |
+
+
 # Regras
 
 ## A Caixa Forte do Grimório

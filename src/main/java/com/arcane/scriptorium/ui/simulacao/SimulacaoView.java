@@ -137,6 +137,7 @@ public class SimulacaoView {
     private EventBus eventBus;
     private boolean isPaused = false;
     private boolean isSimulationFinished = false;
+    private javafx.animation.FadeTransition pauseBlinkAnimation;
     
     private ConcurrentLinkedQueue<SimulationEvent> eventQueue = new ConcurrentLinkedQueue<>();
     private AnimationTimer uiUpdateTimer;
@@ -296,6 +297,14 @@ public class SimulacaoView {
             boolean showAutoControls = mode == Mode.AUTOMATIC || mode == Mode.TESTS || mode == Mode.CUSTOM;
             autoControls.setOpacity(showAutoControls ? 1.0 : 0.0);
             autoControls.setMouseTransparent(!showAutoControls);
+            
+            if (autoControls.getChildren().size() >= 3) {
+                boolean showPauseStop = (mode != Mode.TESTS);
+                autoControls.getChildren().get(1).setVisible(showPauseStop);
+                autoControls.getChildren().get(1).setManaged(showPauseStop);
+                autoControls.getChildren().get(2).setVisible(showPauseStop);
+                autoControls.getChildren().get(2).setManaged(showPauseStop);
+            }
         }
 
         root.setLeft(queuePanel);
@@ -1091,14 +1100,28 @@ public class SimulacaoView {
         if (isPaused) {
             engine.pause();
             if (pauseBtn != null) {
-                pauseBtn.setText("RESUME");
+                if (pauseBlinkAnimation == null) {
+                    pauseBlinkAnimation = new javafx.animation.FadeTransition(javafx.util.Duration.millis(600), pauseBtn);
+                    pauseBlinkAnimation.setFromValue(1.0);
+                    pauseBlinkAnimation.setToValue(0.3);
+                    pauseBlinkAnimation.setCycleCount(javafx.animation.Animation.INDEFINITE);
+                    pauseBlinkAnimation.setAutoReverse(true);
+                }
+                pauseBlinkAnimation.play();
                 pauseBtn.setStyle(buildToggleStyle(true));
             }
         } else {
             engine.resume();
-            if (pauseBtn != null) {
-                pauseBtn.setText("PAUSE");
-                pauseBtn.setStyle(String.join(";",
+            Button targetBtn = pauseBtn;
+            if (targetBtn == null && pauseBlinkAnimation != null) {
+                targetBtn = (Button) pauseBlinkAnimation.getNode();
+            }
+            if (pauseBlinkAnimation != null) {
+                pauseBlinkAnimation.stop();
+            }
+            if (targetBtn != null) {
+                targetBtn.setOpacity(1.0);
+                targetBtn.setStyle(String.join(";",
                     "-fx-background-color: " + COLOR_BUTTON_BG,
                     "-fx-text-fill: " + COLOR_BUTTON_TEXT,
                     "-fx-font-family: Serif",
