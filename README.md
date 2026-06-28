@@ -1,13 +1,29 @@
 # Arcane Scriptorium
-
 ## Trabalho Acadêmico — Sistemas Operacionais
-
 Este projeto foi desenvolvido como parte da disciplina de **Sistemas Operacionais** no curso de **Engenharia de Computação do IFSULDEMINAS**.
+## 👥 Equipe
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/douglasnunesif">
+        <img src="https://github.com/douglasnunesif.png?size=120" width="120" alt="Douglas Nunes"><br>
+        <sub><b>Douglas Nunes</b></sub>
+      </a>
+      <br>
+      <sub>Professor</sub>
+    </td>
+    <td align="center">
+      <a href="https://github.com/alessandro0augusto0">
+        <img src="https://github.com/alessandro0augusto0.png?size=120" width="120" alt="Alessandro Augusto"><br>
+        <sub><b>Alessandro Augusto</b></sub>
+      </a>
+      <br>
+      <sub>Aluno</sub>
+    </td>
+  </tr>
+</table>
 
-**Professor:** Douglas Nunes<br>
-**Aluno:** Alessandro Augusto
-
-<div align="center">
+<div>
 
 ![IFSULDEMINAS](https://img.shields.io/badge/IFSULDEMINAS-Engenharia%20de%20Computação-006B3F?style=for-the-badge&logoColor=white)
 
@@ -15,15 +31,11 @@ Este projeto foi desenvolvido como parte da disciplina de **Sistemas Operacionai
 
 ## ⚙️ Tecnologias Utilizadas
 
-<p align="left">
-  <img src="https://skillicons.dev/icons?i=java,maven" />
-
-  <img height="48" src="https://img.shields.io/badge/JavaFX-FF6600?style=flat&logo=openjdk&logoColor=white" />
-</p>
-
-* Java 21
-* Maven
-* JavaFX
+| | |
+|:---:|---|
+| <img src="https://skillicons.dev/icons?i=java" width="48"/> | **Java 21** |
+| <img src="https://img.shields.io/badge/JavaFX-FF6600?style=for-the-badge&logo=openjdk&logoColor=white" /> | **JavaFX** |
+| <img src="https://skillicons.dev/icons?i=maven" width="48"/> | **Maven** |
 
 ### Descrição do Problema
 
@@ -47,91 +59,6 @@ A implementação busca garantir:
 * Balanceamento entre desempenho e justiça no escalonamento.
 
 Para isso, são utilizados mecanismos de sincronização da plataforma Java, incluindo **Locks**, **Conditions** e **Semaphores**, além de políticas de prioridade controladas para leitores críticos.
-
-
-## Arquitetura
-
-```text
-com.arcane.scriptorium
-+-- domain            Entidades e enums do dominio
-+-- events            Eventos e observadores da simulacao
-+-- simulation        Ciclo de vida das threads, agentes e metricas
-+-- synchronization   Coordenador de concorrencia e politica de prioridade
-+-- ui.console        Renderizacao ANSI para terminal
-+-- utils             Utilitarios pequenos e coesos
-```
-
-## Decisoes tecnicas
-
-- A politica de sincronizacao fica centralizada em `ArcaneSynchronizationCoordinator`.
-- As entidades concorrentes sao `Runnable`, nao subclasses diretas de `Thread`, para separar comportamento de execucao.
-- O coordenador usa `ReentrantLock(true)` como mutex justo, `Condition` como filas logicas e `Semaphore` como portao da regiao critica.
-- Leitores comuns compartilham a regiao critica, mas param de entrar quando ha escritor aguardando.
-- Leitores criticos podem ultrapassar escritores ate o limite configurado de acessos VIP consecutivos.
-- Apos um escritor executar, o privilegio VIP dos leitores criticos e restaurado.
-
-## Compilar e executar
-
-Com Maven e JDK 21:
-
-```powershell
-mvn compile exec:java
-```
-
-Depois que o projeto ja estiver compilado, tambem funciona:
-
-```powershell
-mvn exec:java
-```
-
-O `exec-maven-plugin` ja esta configurado para executar o modulo `com.arcane.scriptorium` e a classe `com.arcane.scriptorium.MainTerminal`.
-
-Sem Maven, use JDK puro:
-
-```powershell
-javac -d out (Get-ChildItem -Path src/main/java -Recurse -Filter *.java).FullName
-java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.MainTerminal 15000 5
-```
-
-O primeiro argumento e a duracao da simulacao em milissegundos.
-O segundo argumento e o limite maximo de leitores criticos VIP antes de um escritor ser obrigatoriamente atendido.
-
-## Testes de concorrencia
-
-Com Maven instalado:
-
-```powershell
-mvn test
-```
-
-Sem Maven instalado, rode a simulacao principal com JDK puro:
-
-```powershell
-javac -d out (Get-ChildItem -Path src/main/java -Recurse -Filter *.java).FullName
-java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.MainTerminal 15000 5
-```
-
-Tambem existe uma validacao standalone sem Maven e sem dependencias externas:
-
-```powershell
-javac -d out (Get-ChildItem -Path src/main/java -Recurse -Filter *.java).FullName
-java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.validation.StandaloneConcurrencyValidation
-```
-
-O documento [docs/concurrency-validation.md](docs/concurrency-validation.md) descreve os invariantes testados e as limitacoes conhecidas.
-
-## 🚀 Comandos Rápidos (Cheatsheet)
-
-Para facilitar a execução diária, aqui estão os principais comandos usando Maven no terminal:
-
-| Ação | Comando Maven |
-|------|---------------|
-| **Rodar Interface Gráfica (GUI)** | `mvn javafx:run` |
-| **Rodar no Terminal (CLI)** | `mvn compile exec:java` |
-| **Rodar todos os testes** | `mvn test` |
-| **Limpar e rodar testes do zero** | `mvn clean test` |
-| **Limpar projeto e recompilar** | `mvn clean compile` |
-
 
 # Regras
 
@@ -235,6 +162,47 @@ O `ArcaneSynchronizationCoordinator` garante:
 * Priorização controlada para leitores críticos
 * Coordenação usando `Semaphore`, `Lock` e `Condition`
 
+## Decisoes tecnicas
+
+- A politica de sincronizacao fica centralizada em `ArcaneSynchronizationCoordinator`.
+- As entidades concorrentes sao `Runnable`, nao subclasses diretas de `Thread`, para separar comportamento de execucao.
+- O coordenador usa `ReentrantLock(true)` como mutex justo, `Condition` como filas logicas e `Semaphore` como portao da regiao critica.
+- Leitores comuns compartilham a regiao critica, mas param de entrar quando ha escritor aguardando.
+- Leitores criticos podem ultrapassar escritores ate o limite configurado de acessos VIP consecutivos.
+- Apos um escritor executar, o privilegio VIP dos leitores criticos e restaurado.
+
+## 🚀 Execução
+
+### Com Maven
+| Ação | Comando |
+|------|---------|
+| **Rodar GUI** | `mvn javafx:run` |
+| **Rodar Terminal (CLI)** | `mvn compile exec:java` |
+| **Rodar testes** | `mvn test` |
+| **Limpar e testar** | `mvn clean test` |
+| **Limpar e recompilar** | `mvn clean compile` |
+
+### Sem Maven (JDK puro)
+```powershell
+# Compilar
+javac -d out (Get-ChildItem -Path src/main/java -Recurse -Filter *.java).FullName
+
+# Executar
+java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.MainTerminal 15000 5
+```
+
+> O primeiro argumento é a duração da simulação em ms. O segundo é o limite de leitores VIP antes de um escritor ser atendido.
+
+## 🧪 Testes de Concorrência
+
+```powershell
+# Validação standalone (sem Maven, sem dependências externas)
+javac -d out (Get-ChildItem -Path src/main/java -Recurse -Filter *.java).FullName
+java --module-path out --module com.arcane.scriptorium/com.arcane.scriptorium.validation.StandaloneConcurrencyValidation
+```
+
+Veja [docs/concurrency-validation.md](docs/concurrency-validation.md) para os invariantes testados e limitações conhecidas.
+
 ---
 
 ## Conceitos de Concorrência Demonstrados
@@ -248,3 +216,45 @@ O `ArcaneSynchronizationCoordinator` garante:
 | Wake-up coletivo        | `signalAll()`          |
 | Starvation Prevention   | `waitingWriters`       |
 | Threads concorrentes    | Agentes arcanos        |
+
+## 🧙‍♂️ Tokens e Agentes Arcanos
+
+Os tokens (imagens) presentes na pasta de assets representam os agentes em seus diferentes estados no clássico problema dos Leitores e Escritores de Tanenbaum, além dos recursos (grimórios) manipulados por eles. Cada conjunto de tokens faz referência a um personagem fictício específico atuando em um de três papéis.
+
+### Estados dos Agentes
+- **Idle (Esperando):** O agente está parado na fila esperando.
+- **Frozen (Congelado):** O agente está congelado na sala de espera (bloqueado aguardando liberação do acesso).
+- **Reading / Writing (Lendo ou Escrevendo):** O agente está ativamente lendo ou escrevendo no grimório.
+
+### Leitores Comuns (Magos)
+Realizam consultas simultâneas ao grimório.
+
+| Personagem | Esperando | Congelado | Lendo |
+| :---: | :---: | :---: | :---: |
+| **Harry Potter** | <img src="src/main/resources/assets/harry_idle.png" width="64"/> | <img src="src/main/resources/assets/harry_frozen.png" width="64"/> | <img src="src/main/resources/assets/harry_reading.png" width="64"/> |
+| **Hermione Granger** | <img src="src/main/resources/assets/hermione_idle.png" width="64"/> | <img src="src/main/resources/assets/hermione_frozen.png" width="64"/> | <img src="src/main/resources/assets/hermione_reading.png" width="64"/> |
+| **Ron Weasley** | <img src="src/main/resources/assets/ron_idle.png" width="64"/> | <img src="src/main/resources/assets/ron_frozen.png" width="64"/> | <img src="src/main/resources/assets/ron_reading.png" width="64"/> |
+
+### Leitores Críticos (Feiticeiros)
+Possuem prioridade elevada de acesso.
+
+| Personagem | Esperando | Congelado | Lendo |
+| :---: | :---: | :---: | :---: |
+| **Sauron** | <img src="src/main/resources/assets/sauron_idle.png" width="64"/> | <img src="src/main/resources/assets/sauron_frozen.png" width="64"/> | <img src="src/main/resources/assets/sauron_reading.png" width="64"/> |
+| **Voldemort** | <img src="src/main/resources/assets/voldemort_idle.png" width="64"/> | <img src="src/main/resources/assets/voldemort_frozen.png" width="64"/> | <img src="src/main/resources/assets/voldemort_reading.png" width="64"/> |
+
+### Escritores (Anciãos)
+Exigem acesso exclusivo para modificação do grimório.
+
+| Personagem | Esperando | Congelado | Escrevendo |
+| :---: | :---: | :---: | :---: |
+| **Dumbledore** | <img src="src/main/resources/assets/dumbledore_idle.png" width="64"/> | <img src="src/main/resources/assets/dumbledore_frozen.png" width="64"/> | <img src="src/main/resources/assets/dumbledore_writing.png" width="64"/> |
+| **Gandalf** | <img src="src/main/resources/assets/gandalf_idle.png" width="64"/> | <img src="src/main/resources/assets/gandalf_frozen.png" width="64"/> | <img src="src/main/resources/assets/gandalf_writing.png" width="64"/> |
+
+### Grimórios (Recursos)
+Representam a região crítica que está sendo acessada.
+
+| Individual | Ar | Terra | Fogo | Água |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="src/main/resources/assets/grimoire_main.png" width="80"/> | <img src="src/main/resources/assets/grimoire_air.png" width="80"/> | <img src="src/main/resources/assets/grimoire_earth.png" width="80"/> | <img src="src/main/resources/assets/grimoire_fire.png" width="80"/> | <img src="src/main/resources/assets/grimoire_water.png" width="80"/> |
+

@@ -166,7 +166,14 @@ public class RegrasView {
                 item("Starvation Prevention = waitingWriters"),
                 item("Threads concorrentes = Agentes arcanos"),
 
-                section("5. MANUAL DOS TOKENS ARCANOS (CATÁLOGO GRÁFICO)"),
+                section("5. ESTADOS DOS AGENTES"),
+                paragraph(
+                        "• Idle (Esperando): O agente está parado na fila esperando.\n" +
+                        "• Frozen (Congelado): O agente está congelado na sala de espera (bloqueado aguardando liberação do acesso).\n" +
+                        "• Reading / Writing (Lendo ou Escrevendo): O agente está ativamente lendo ou escrevendo no grimório."
+                ),
+
+                section("6. MANUAL DOS TOKENS ARCANOS (CATÁLOGO GRÁFICO)"),
                 buildImageRow("harry_reading", "Leitor Comum Ativo", "Consultando o grimório. Múltiplos podem ler juntos."),
                 buildImageRow("harry_frozen", "Leitor Comum Bloqueado", "Congelado no Monitor. Aguardando o Escritor sair ou cota de lote."),
                 buildImageRow("voldemort_reading", "Leitor Crítico (VIP)", "Tem prioridade sobre novos escritores, até o limite de rajada."),
@@ -174,9 +181,9 @@ public class RegrasView {
                 buildImageRow("gandalf_frozen", "Escritor Bloqueado", "Aguardando a sala esvaziar para entrar."),
                 buildImageRow("grimoire_main", "O Grimório", "A região crítica protegida pelo Semaphore."),
 
-                section("6. DEMONSTRAÇÕES DE TOKENS"),
+                section("7. DEMONSTRAÇÕES DE TOKENS"),
                 
-                section("🟢 Leitores Comuns (COMMON_READER)"),
+                section("🟢 Leitores Comuns (Magos)"),
                 item("Harry"),
                 buildImageRow("harry_idle", "Parado na fila", "harry_idle.png"),
                 buildImageRow("harry_frozen", "Congelado no Wait Set", "harry_frozen.png"),
@@ -192,7 +199,7 @@ public class RegrasView {
                 buildImageRow("hermione_frozen", "Congelado no Wait Set", "hermione_frozen.png"),
                 buildImageRow("hermione_reading", "Lendo o Grimório", "hermione_reading.png"),
 
-                section("🟣 Leitores Críticos - VIP (CRITICAL_READER)"),
+                section("🟣 Leitores Críticos - VIP (Feiticeiros)"),
                 item("Voldemort"),
                 buildImageRow("voldemort_idle", "Parado na fila", "voldemort_idle.png"),
                 buildImageRow("voldemort_frozen", "Congelado no Wait Set", "voldemort_frozen.png"),
@@ -203,7 +210,7 @@ public class RegrasView {
                 buildImageRow("sauron_frozen", "Congelado no Wait Set", "sauron_frozen.png"),
                 buildImageRow("sauron_reading", "Lendo o Grimório", "sauron_reading.png"),
 
-                section("🔴 Escritores (WRITER)"),
+                section("🔴 Escritores (Anciãos)"),
                 item("Gandalf"),
                 buildImageRow("gandalf_idle", "Parado na fila", "gandalf_idle.png"),
                 buildImageRow("gandalf_frozen", "Congelado no Wait Set", "gandalf_frozen.png"),
