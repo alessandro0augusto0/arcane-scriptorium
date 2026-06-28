@@ -87,11 +87,3 @@ Como o método `blockReason()` não tem uma explicação para um "bloqueio de sa
 ```
 [LR] Mago Harry #1 BLOCKED Aguardando politica de escalonamento.
 ```
-
----
-
-> **💡 Dica do Tech Lead:** Com isso salvo no repositório, você pode abrir o VSCode durante a apresentação, mostrar o arquivo para a banca e dizer:
->
-> *"Professor, se o senhor quiser ver as defesas do código agindo ao vivo, eu deixei documentado um Guia de Chaos Testing na pasta docs. Posso rodar um deles se o senhor quiser."*
->
-> É o xeque-mate para tirar nota 10. Você não está apenas entregando o código — você está entregando o **manual de qualidade da engenharia**!
